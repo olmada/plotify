@@ -1,11 +1,13 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Button, Alert, Image, FlatList } from 'react-native';
-import { getPlantById, uploadPhoto, getPhotosForPlant } from '../../src/services/api';
+import { useLocalSearchParams, useNavigation, Link, useFocusEffect, useRouter } from 'expo-router';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, Button, Alert, Image, FlatList, ScrollView } from 'react-native';
+import { getPlantById, uploadPhoto, getPhotosForPlant, deletePlant } from '../../src/services/api';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams();
+  // Use `useNavigation` to get access to the navigation object for setting screen options.
+  const navigation = useNavigation();
   const router = useRouter();
 
   const [plant, setPlant] = useState(null);
@@ -28,9 +30,26 @@ export default function PlantDetailScreen() {
     }
   }, [id]);
 
+  // useFocusEffect runs every time the screen comes into focus.
+  // It must be wrapped in a useCallback as per the hook's API.
+  useFocusEffect(
+    useCallback(() => {
+      fetchPlantData();
+    }, [fetchPlantData])
+  );
+
+  // Set header options dynamically after the plant data (and id) is available.
   useEffect(() => {
-    fetchPlantData();
-  }, [fetchPlantData]);
+    if (plant) {
+      navigation.setOptions({
+        headerRight: () => (
+          <Link href={`/edit-plant/${id}`} asChild>
+            <Button title="Edit" />
+          </Link>
+        ),
+      });
+    }
+  }, [navigation, plant, id]);
 
   const handleUploadPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -62,6 +81,33 @@ export default function PlantDetailScreen() {
     }
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Plant",
+      "Are you sure you want to permanently delete this plant and all its data? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          onPress: async () => {
+            try {
+              await deletePlant(id);
+              Alert.alert("Success", "Plant deleted.");
+              router.replace('/(app)'); // Go back to the list and remove this page from history
+            } catch (error) {
+              Alert.alert("Error", "Could not delete the plant.");
+              console.error("Deletion error:", error);
+            }
+          },
+          style: "destructive",
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return <ActivityIndicator style={styles.container} size="large" />;
   }
@@ -75,7 +121,8 @@ export default function PlantDetailScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
+      {/* The Stack.Screen component has been removed from here and is now handled by the useEffect hook above. */}
       <Text style={styles.title}>{plant.name}</Text>
       <Text style={styles.subtitle}>{plant.variety?.common_name}</Text>
       <Text style={styles.notes}>{plant.notes}</Text>
@@ -97,7 +144,15 @@ export default function PlantDetailScreen() {
         ListHeaderComponent={<Text style={styles.sectionTitle}>Photos</Text>}
         ListEmptyComponent={<Text style={styles.emptyText}>No photos yet. Add one!</Text>}
       />
-    </View>
+
+      <View style={styles.dangerZone}>
+        <Button
+          title="Delete Plant"
+          onPress={handleDelete}
+          color="#ff3b30"
+        />
+      </View>
+    </ScrollView>
   );
 }
 
@@ -141,5 +196,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     color: 'gray'
-  }
+  },
+  dangerZone: {
+    marginTop: 40,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderColor: '#eee'
+  },
 });

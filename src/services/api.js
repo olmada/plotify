@@ -47,6 +47,55 @@ export const createPlant = async (plantData) => {
   return data;
 };
 
+export const updatePlant = async (id, plantData) => {
+  const { data, error } = await supabase
+    .from('plants')
+    .update(plantData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const deletePlant = async (plantId) => {
+  const owner_id = await getUserId();
+
+  // 1. List and delete all photos from Supabase Storage for this plant.
+  const photoFolder = `${owner_id}/${plantId}`;
+  const { data: files, error: listError } = await supabase.storage
+    .from('plant-photos')
+    .list(photoFolder);
+
+  if (listError) {
+    // It's okay if the folder doesn't exist, but other errors should be thrown.
+    if (listError.message !== 'The resource was not found') {
+      console.error('Error listing photos for deletion:', listError);
+      throw listError;
+    }
+  }
+
+  if (files && files.length > 0) {
+    const filePaths = files.map(file => `${photoFolder}/${file.name}`);
+    const { error: removeError } = await supabase.storage
+      .from('plant-photos')
+      .remove(filePaths);
+
+    if (removeError) {
+      console.error('Error removing photos from storage:', removeError);
+      throw removeError;
+    }
+  }
+
+  // 2. Delete the plant record. RLS and CASCADE will handle related table rows.
+  const { error: deleteError } = await supabase.from('plants').delete().eq('id', plantId);
+
+  if (deleteError) {
+    throw deleteError;
+  }
+};
+
 // NEW FUNCTION: Fetch photos for a specific plant
 export const getPhotosForPlant = async (plantId) => {
   if (!plantId) return [];

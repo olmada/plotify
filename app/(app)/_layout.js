@@ -26,11 +26,11 @@ export default function AppLayout() {
           ),
         }}
       />
-      <Stack.Screen 
-        name="[id]" 
-        options={{ 
-          title: "Plant Details" 
-        }} 
+      <Stack.Screen
+        name="[id]"
+        options={{
+          title: "Plant Details",
+        }}
       />
       <Stack.Screen 
         name="add" 
@@ -38,6 +38,13 @@ export default function AppLayout() {
           title: "Add New Plant", 
           presentation: 'modal' 
         }} 
+      />
+      <Stack.Screen
+        name="edit-plant/[id]"
+        options={{
+          title: "Edit Plant",
+          presentation: 'modal',
+        }}
       />
     </Stack>
   );
