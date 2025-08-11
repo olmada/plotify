@@ -6,6 +6,7 @@ import { createPlant } from '../src/services/api';
 
 export default function AddPlantScreen() {
   const [name, setName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
 
   const handleSave = async () => {
@@ -14,6 +15,7 @@ export default function AddPlantScreen() {
       return;
     }
 
+    setIsSaving(true);
     try {
       await createPlant({ name });
       Alert.alert("Success", "Plant added successfully!");
@@ -21,6 +23,8 @@ export default function AddPlantScreen() {
     } catch (error) {
       Alert.alert("Error", "Could not add plant.");
       console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -32,7 +36,7 @@ export default function AddPlantScreen() {
         value={name}
         onChangeText={setName}
       />
-      <Button title="Save Plant" onPress={handleSave} />
+      <Button title={isSaving ? "Saving..." : "Save Plant"} onPress={handleSave} disabled={isSaving} />
     </View>
   );
 }

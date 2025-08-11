@@ -1,34 +1,18 @@
-import { Tabs, Link } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        // The header is now managed by the root stack layout,
-        // so we can add the "Add" button to the plant list here.
+        headerShown: false, // The header is now handled by the inner stack
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="plants" // This now points to the `plants` directory
         options={{
           title: 'Plants',
           tabBarIcon: ({ color, size }) => <Ionicons name="leaf-outline" size={size} color={color} />,
-          headerRight: () => (
-            <Link href="/add" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <Ionicons
-                    name="add-circle"
-                    size={30}
-                    color="#007AFF"
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
         }}
       />
       <Tabs.Screen
@@ -38,8 +22,6 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" size={size} color={color} />,
         }}
       />
-      {/* This hides the plant detail screen from the tab bar */}
-      <Tabs.Screen name="[id]" options={{ href: null }} />
     </Tabs>
   );
 }
