@@ -46,6 +46,27 @@ export default function AppLayout() {
           presentation: 'modal',
         }}
       />
+      <Stack.Screen
+        name="add-journal/[plantId]"
+        options={{
+          title: "New Journal Entry",
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="add-photo-entry/[plantId]"
+        options={{
+          title: "New Photo Entry",
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="add-photo-entry/[plantId]"
+        options={{
+          title: "New Photo Entry",
+          presentation: 'modal',
+        }}
+      />
     </Stack>
   );
 }

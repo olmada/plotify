@@ -59,6 +59,22 @@ export const updatePlant = async (id, plantData) => {
   return data;
 };
 
+export const createJournal = async (plantId, text) => {
+  const owner_id = await getUserId();
+  const { data, error } = await supabase
+    .from('journals')
+    .insert([{
+      owner_id,
+      plant_id: plantId,
+      text,
+    }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
 export const deletePlant = async (plantId) => {
   const owner_id = await getUserId();
 
@@ -96,6 +112,33 @@ export const deletePlant = async (plantId) => {
   }
 };
 
+export const getJournalsForPlant = async (plantId) => {
+  if (!plantId) return [];
+
+  const { data, error } = await supabase
+    .from('journals')
+    .select('id, text, created_at')
+    .eq('plant_id', plantId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching journals:', error);
+    return [];
+  }
+  return data;
+};
+
+export const getPlantTimeline = async (plantId) => {
+  const { data, error } = await supabase.functions.invoke('plant_timeline', {
+    body: { plantId },
+  });
+
+  if (error) {
+    throw error;
+  }
+  return data;
+};
+
 // NEW FUNCTION: Fetch photos for a specific plant
 export const getPhotosForPlant = async (plantId) => {
   if (!plantId) return [];
@@ -129,7 +172,7 @@ export const getPhotosForPlant = async (plantId) => {
 
 
 // UPDATED FUNCTION: Now takes plantId and adds a DB record
-export const uploadPhoto = async (fileUri, plantId) => {
+export const uploadPhoto = async (fileUri, plantId, journalId = null) => {
   const owner_id = await getUserId();
   const fileBase64 = await FileSystem.readAsStringAsync(fileUri, {
     encoding: FileSystem.EncodingType.Base64,
@@ -154,6 +197,7 @@ export const uploadPhoto = async (fileUri, plantId) => {
       plant_id: plantId,
       owner_id: owner_id,
       storage_path: filePath,
+      journal_id: journalId,
     })
     .select()
     .single();

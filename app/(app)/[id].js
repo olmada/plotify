@@ -1,8 +1,7 @@
 import { useLocalSearchParams, useNavigation, Link, useFocusEffect, useRouter } from 'expo-router';
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Button, Alert, Image, FlatList, ScrollView } from 'react-native';
-import { getPlantById, uploadPhoto, getPhotosForPlant, deletePlant } from '../../src/services/api';
-import * as ImagePicker from 'expo-image-picker';
+import { View, Text, StyleSheet, ActivityIndicator, Button, Alert, Image, FlatList } from 'react-native';
+import { getPlantById, deletePlant, getPlantTimeline } from '../../src/services/api';
 
 export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -11,17 +10,19 @@ export default function PlantDetailScreen() {
   const router = useRouter();
 
   const [plant, setPlant] = useState(null);
-  const [photos, setPhotos] = useState([]);
+  const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
 
   const fetchPlantData = useCallback(async () => {
     try {
       setLoading(true);
-      const plantData = await getPlantById(id);
+      // Fetch plant details and the new unified timeline concurrently
+      const [plantData, timelineData] = await Promise.all([
+        getPlantById(id),
+        getPlantTimeline(id),
+      ]);
       setPlant(plantData);
-      const photoData = await getPhotosForPlant(id);
-      setPhotos(photoData);
+      setTimeline(timelineData);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch plant details.");
       console.error(error);
@@ -50,36 +51,6 @@ export default function PlantDetailScreen() {
       });
     }
   }, [navigation, plant, id]);
-
-  const handleUploadPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
-      return;
-    }
-
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
-
-    if (!result.canceled) {
-      setUploading(true);
-      try {
-        await uploadPhoto(result.assets[0].uri, id);
-        Alert.alert("Success", "Photo uploaded!");
-        // Refresh photos after upload
-        await fetchPlantData(); 
-      } catch (error) {
-        Alert.alert("Upload Failed", error.message);
-        console.error(error);
-      } finally {
-        setUploading(false);
-      }
-    }
-  };
 
   const handleDelete = () => {
     Alert.alert(
@@ -120,39 +91,65 @@ export default function PlantDetailScreen() {
     );
   }
 
-  return (
-    <ScrollView style={styles.container}>
-      {/* The Stack.Screen component has been removed from here and is now handled by the useEffect hook above. */}
-      <Text style={styles.title}>{plant.name}</Text>
-      <Text style={styles.subtitle}>{plant.variety?.common_name}</Text>
-      <Text style={styles.notes}>{plant.notes}</Text>
-      
-      <Button 
-        title={uploading ? "Uploading..." : "Upload Photo"} 
-        onPress={handleUploadPhoto}
-        disabled={uploading}
-      />
-      
-      <FlatList
-        data={photos}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        style={styles.photoList}
-        renderItem={({ item }) => (
-          <Image source={{ uri: item.url }} style={styles.photo} />
-        )}
-        ListHeaderComponent={<Text style={styles.sectionTitle}>Photos</Text>}
-        ListEmptyComponent={<Text style={styles.emptyText}>No photos yet. Add one!</Text>}
-      />
+  const renderTimelineItem = ({ item }) => {
+    switch (item.type) {
+      case 'photo':
+        return <Image source={{ uri: item.data.url }} style={styles.timelinePhoto} />;
+      case 'journal':
+        return (
+          <View style={styles.journalEntry}>
+            {/* If the journal entry has a photo, display it */}
+            {item.data.photo_url && (
+              <Image source={{ uri: item.data.photo_url }} style={styles.timelinePhoto} />
+            )}
+            <Text style={styles.journalDate}>{new Date(item.timestamp).toLocaleString()}</Text>
+            {/* Only render the text if it exists */}
+            {item.data.text && <Text style={styles.journalText}>{item.data.text}</Text>}
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
 
-      <View style={styles.dangerZone}>
-        <Button
-          title="Delete Plant"
-          onPress={handleDelete}
-          color="#ff3b30"
-        />
-      </View>
-    </ScrollView>
+  return (
+    <FlatList
+      style={styles.container}
+      data={timeline}
+      keyExtractor={(item) => item.id}
+      renderItem={renderTimelineItem}
+      ListHeaderComponent={
+        <>
+          <Text style={styles.title}>{plant.name}</Text>
+          <Text style={styles.subtitle}>{plant.variety?.common_name}</Text>
+          <Text style={styles.notes}>{plant.notes}</Text>
+
+          <View style={styles.buttonContainer}>
+            {/* This button now navigates to the screen for adding a photo with an optional comment */}
+            <Link href={`/(app)/add-photo-entry/${id}`} asChild>
+              <Button title="New Photo Entry" />
+            </Link>
+            <Link href={`/(app)/add-journal/${id}`} asChild>
+              <Button title="New Journal Entry" />
+            </Link>
+          </View>
+
+          <Text style={styles.sectionTitle}>Timeline</Text>
+        </>
+      }
+      ListEmptyComponent={
+        <Text style={styles.emptyText}>No photos or journal entries yet. Add one!</Text>
+      }
+      ListFooterComponent={
+        <View style={styles.dangerZone}>
+          <Button
+            title="Delete Plant"
+            onPress={handleDelete}
+            color="#ff3b30"
+          />
+        </View>
+      }
+    />
   );
 }
 
@@ -175,28 +172,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 20,
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     marginTop: 20,
     marginBottom: 10,
   },
-  photoList: {
-    flex: 1,
-    marginTop: 10,
-  },
-  photo: {
-    width: 100,
-    height: 100,
-    margin: 4,
+  timelinePhoto: {
+    width: '100%',
+    aspectRatio: 4 / 3, // Maintain aspect ratio
     borderRadius: 8,
-    backgroundColor: '#eee' // Placeholder color
+    marginBottom: 12, // Add margin bottom to separate from text if both exist
   },
   emptyText: {
     textAlign: 'center',
     marginTop: 20,
     color: 'gray'
   },
+  journalEntry: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  journalDate: {
+    fontSize: 12,
+    color: 'gray',
+    marginBottom: 4,
+  },
+  journalText: { fontSize: 16, lineHeight: 22 },
   dangerZone: {
     marginTop: 40,
     paddingTop: 20,
