@@ -1,7 +1,9 @@
 import { useLocalSearchParams, useNavigation, Link, useFocusEffect, useRouter } from 'expo-router';
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Button, Alert, Image, FlatList } from 'react-native';
-import { getPlantById, deletePlant, getPlantTimeline } from '../../src/services/api';
+import { View, Text, StyleSheet, ActivityIndicator, Button, Alert, Image, FlatList, Pressable } from 'react-native';
+import { getPlantById, deletePlant, getPlantTimeline, getTasksForPlant, updateTask, deleteTask } from '../../src/services/api';
+import { RRule } from 'rrule';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -11,18 +13,21 @@ export default function PlantDetailScreen() {
 
   const [plant, setPlant] = useState(null);
   const [timeline, setTimeline] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPlantData = useCallback(async () => {
     try {
       setLoading(true);
       // Fetch plant details and the new unified timeline concurrently
-      const [plantData, timelineData] = await Promise.all([
+      const [plantData, timelineData, tasksData] = await Promise.all([
         getPlantById(id),
         getPlantTimeline(id),
+        getTasksForPlant(id),
       ]);
       setPlant(plantData);
       setTimeline(timelineData);
+      setTasks(tasksData);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch plant details.");
       console.error(error);
@@ -67,7 +72,7 @@ export default function PlantDetailScreen() {
             try {
               await deletePlant(id);
               Alert.alert("Success", "Plant deleted.");
-              router.replace('/(app)'); // Go back to the list and remove this page from history
+              router.replace('/(tabs)'); // Go back to the list and remove this page from history
             } catch (error) {
               Alert.alert("Error", "Could not delete the plant.");
               console.error("Deletion error:", error);
@@ -77,6 +82,47 @@ export default function PlantDetailScreen() {
         },
       ]
     );
+  };
+
+  const handleToggleTask = async (task) => {
+    // If the task is recurring, calculate the next due date
+    if (task.recurring_rule) {
+      try {
+        // The start date for recurrence is the current due date
+        const rule = RRule.fromString(`DTSTART=${task.due_date}\n${task.recurring_rule}`);
+        const next = rule.after(new Date());
+
+        if (next) {
+          const updatedTask = await updateTask(task.id, { due_date: next.toISOString() });
+          setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t).sort((a, b) => new Date(a.due_date) - new Date(b.due_date)));
+        } else {
+          // If there is no next date, treat it as a normal task completion
+          await updateTask(task.id, { completed: true });
+          setTasks(currentTasks => currentTasks.filter(t => t.id !== task.id));
+        }
+      } catch (error) {
+        Alert.alert("Error", "Could not update recurring task.");
+        console.error("Recurring task update error:", error);
+      }
+    } else {
+      // If it's not a recurring task, just mark it as complete and remove from the list
+      try {
+        await updateTask(task.id, { completed: true });
+        setTasks(currentTasks => currentTasks.filter(t => t.id !== task.id));
+      } catch (error) {
+        Alert.alert("Error", "Could not update the task.");
+        console.error("Task update error:", error);
+      }
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    try {
+      await deleteTask(taskId);
+      setTasks(currentTasks => currentTasks.filter(t => t.id !== taskId));
+    } catch (error) {
+      Alert.alert("Error", "Could not delete the task.");
+    }
   };
 
   if (loading) {
@@ -125,12 +171,12 @@ export default function PlantDetailScreen() {
           <Text style={styles.notes}>{plant.notes}</Text>
 
           <View style={styles.buttonContainer}>
-            {/* This button now navigates to the screen for adding a photo with an optional comment */}
-            <Link href={`/(app)/add-photo-entry/${id}`} asChild>
-              <Button title="New Photo Entry" />
+            {/* This button now navigates to a unified entry screen */}
+            <Link href={`/add-entry/${id}`} asChild>
+              <Button title="New Entry" />
             </Link>
-            <Link href={`/(app)/add-journal/${id}`} asChild>
-              <Button title="New Journal Entry" />
+            <Link href={`/add-task/${id}`} asChild>
+              <Button title="New Task" />
             </Link>
           </View>
 
@@ -141,13 +187,31 @@ export default function PlantDetailScreen() {
         <Text style={styles.emptyText}>No photos or journal entries yet. Add one!</Text>
       }
       ListFooterComponent={
-        <View style={styles.dangerZone}>
-          <Button
-            title="Delete Plant"
-            onPress={handleDelete}
-            color="#ff3b30"
-          />
-        </View>
+        <>
+          <Text style={styles.sectionTitle}>Tasks</Text>
+          {tasks.length > 0 ? (
+            tasks.map(task => (
+              <View key={task.id} style={styles.taskContainer}>
+                <Pressable onPress={() => handleToggleTask(task)} style={styles.taskCheckbox}>
+                  {task.completed && <View style={styles.taskCheckboxInner} />}
+                </Pressable>
+                <View style={styles.taskTextContainer}>
+                  <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>{task.title}</Text>
+                  <Text style={styles.taskDueDate}>Due: {new Date(task.due_date).toLocaleDateString()}</Text>
+                </View>
+                <Pressable onPress={() => handleDeleteTask(task.id)} style={styles.deleteButton}>
+                  <Ionicons name="trash-outline" size={22} color="#ff3b30" />
+                </Pressable>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No tasks yet. Add one!</Text>
+          )}
+
+          <View style={styles.dangerZone}>
+            <Button title="Delete Plant" onPress={handleDelete} color="#ff3b30" />
+          </View>
+        </>
       }
     />
   );
@@ -208,6 +272,41 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   journalText: { fontSize: 16, lineHeight: 22 },
+  taskContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  taskCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  taskCheckboxInner: {
+    width: 14,
+    height: 14,
+    backgroundColor: '#007AFF',
+    borderRadius: 2,
+  },
+  taskTextContainer: {
+    flex: 1,
+  },
+  taskTitle: { fontSize: 16, fontWeight: '500' },
+  taskTitleCompleted: { textDecorationLine: 'line-through', color: 'gray' },
+  taskDueDate: { fontSize: 12, color: 'gray', marginTop: 2 },
+  deleteButton: {
+    padding: 5,
+  },
   dangerZone: {
     marginTop: 40,
     paddingTop: 20,

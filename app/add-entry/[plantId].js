@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert, Image, Text } from 'react-native';
+import { View, TextInput, Button, StyleSheet, Alert, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { createJournal, uploadPhoto } from '../../../src/services/api';
+import { createJournal, uploadPhoto } from '../../src/services/api';
 
-export default function AddPhotoEntryScreen() {
+export default function AddEntryScreen() {
   const { plantId } = useLocalSearchParams();
   const router = useRouter();
 
@@ -32,22 +32,19 @@ export default function AddPhotoEntryScreen() {
   };
 
   const handleSave = async () => {
-    if (!imageUri) {
-      Alert.alert("Required", "Please select a photo to save.");
+    if (!imageUri && !comment.trim()) {
+      Alert.alert("Required", "Please add a photo or write a comment to create an entry.");
       return;
     }
 
     setIsSaving(true);
     try {
-      let journalId = null;
-      // If there's a comment, create a journal entry first.
-      if (comment.trim()) {
-        const newJournal = await createJournal(plantId, comment.trim());
-        journalId = newJournal.id;
-      }
+      // Every entry is a journal entry. A photo is attached to it if it exists.
+      const newJournal = await createJournal(plantId, comment.trim());
       
-      // Upload the photo, linking it to the new journal if one was created.
-      await uploadPhoto(imageUri, plantId, journalId);
+      if (imageUri) {
+        await uploadPhoto(imageUri, plantId, newJournal.id);
+      }
       
       router.back();
     } catch (error) {
@@ -60,24 +57,27 @@ export default function AddPhotoEntryScreen() {
 
   return (
     <View style={styles.container}>
-      <Button title="Pick a photo from camera roll" onPress={pickImage} />
-      {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
-      
       <TextInput
         style={styles.input}
-        placeholder="Add a comment (optional)"
+        placeholder="What's new with your plant today?"
         value={comment}
         onChangeText={setComment}
         multiline
       />
       
-      <Button title={isSaving ? "Saving..." : "Save Entry"} onPress={handleSave} disabled={isSaving || !imageUri} />
+      <View style={styles.imagePickerContainer}>
+        <Button title="Add a Photo" onPress={pickImage} />
+        {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
+      </View>
+      
+      <Button title={isSaving ? "Saving..." : "Save Entry"} onPress={handleSave} disabled={isSaving} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff', alignItems: 'center' },
-  image: { width: '100%', height: 200, resizeMode: 'contain', marginVertical: 20, borderRadius: 8 },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, marginTop: 20, borderRadius: 5, width: '100%', height: 100, textAlignVertical: 'top' },
+  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
+  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 5, width: '100%', height: 150, textAlignVertical: 'top', marginBottom: 20 },
+  imagePickerContainer: { alignItems: 'center', marginBottom: 20 },
+  image: { width: 200, height: 200, resizeMode: 'contain', marginTop: 20, borderRadius: 8 },
 });

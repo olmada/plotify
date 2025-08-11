@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { createPlant } from '../../src/services/api';
+import { createPlant } from '../src/services/api';
 
 export default function AddPlantScreen() {
   const [name, setName] = useState('');

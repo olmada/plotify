@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, Button, StyleSheet, Alert, ActivityIndicator, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getPlantById, updatePlant } from '../../../src/services/api';
+import { getPlantById, updatePlant } from '../../src/services/api';
 
 export default function EditPlantScreen() {
   const { id } = useLocalSearchParams();

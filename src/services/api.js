@@ -75,6 +75,59 @@ export const createJournal = async (plantId, text) => {
   return data;
 };
 
+export const getAllTasks = async () => {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*, plant:plants (name)')
+    .eq('completed', false)
+    .order('due_date', { ascending: true });
+
+  if (error) throw error;
+  return data;
+};
+
+export const getTasksForPlant = async (plantId) => {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('plant_id', plantId)
+    .eq('completed', false) // Only fetch active tasks
+    .order('due_date', { ascending: true });
+
+  if (error) throw error;
+  return data;
+};
+
+export const createTask = async (plantId, taskData) => {
+  const owner_id = await getUserId();
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert([{ ...taskData, owner_id, plant_id: plantId }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const updateTask = async (taskId, updates) => {
+  const { data, error } = await supabase
+    .from('tasks')
+    .update(updates)
+    .eq('id', taskId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const deleteTask = async (taskId) => {
+  const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+
+  if (error) throw error;
+};
+
 export const deletePlant = async (plantId) => {
   const owner_id = await getUserId();
 
@@ -112,22 +165,6 @@ export const deletePlant = async (plantId) => {
   }
 };
 
-export const getJournalsForPlant = async (plantId) => {
-  if (!plantId) return [];
-
-  const { data, error } = await supabase
-    .from('journals')
-    .select('id, text, created_at')
-    .eq('plant_id', plantId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching journals:', error);
-    return [];
-  }
-  return data;
-};
-
 export const getPlantTimeline = async (plantId) => {
   const { data, error } = await supabase.functions.invoke('plant_timeline', {
     body: { plantId },
@@ -137,37 +174,6 @@ export const getPlantTimeline = async (plantId) => {
     throw error;
   }
   return data;
-};
-
-// NEW FUNCTION: Fetch photos for a specific plant
-export const getPhotosForPlant = async (plantId) => {
-  if (!plantId) return [];
-
-  const { data: photos, error } = await supabase
-    .from('photos')
-    .select('id, storage_path')
-    .eq('plant_id', plantId)
-    .order('uploaded_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching photos:', error);
-    return [];
-  }
-
-  // For each photo, get its public URL from Storage
-  const photosWithUrls = photos.map(photo => {
-    const { data } = supabase
-      .storage
-      .from('plant-photos')
-      .getPublicUrl(photo.storage_path);
-    
-    return {
-      id: photo.id,
-      url: data.publicUrl
-    };
-  });
-  
-  return photosWithUrls;
 };
 
 
