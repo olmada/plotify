@@ -27,19 +27,18 @@ export default function AddTaskScreen() {
       return;
     }
 
-    let recurring_rule = null;
-    if (recurrence === 'daily') {
-      recurring_rule = 'FREQ=DAILY';
-    } else if (recurrence === 'weekly') {
-      recurring_rule = 'FREQ=WEEKLY'
-    } else if (recurrence === 'monthly') {
-      recurring_rule = 'FREQ=MONTHLY';
-    }
+    const recurrenceMap = {
+      daily: 'FREQ=DAILY',
+      weekly: 'FREQ=WEEKLY',
+      monthly: 'FREQ=MONTHLY',
+    };
+    const recurring_rule = recurrenceMap[recurrence] || null;
 
     setIsSaving(true);
     try {
-      await createTask(plantId, {
+      await createTask({
         title: title.trim(),
+        plant_id: plantId,
         notes: notes.trim(),
         due_date: date.toISOString(),
         recurring_rule: recurring_rule,
@@ -85,10 +84,10 @@ export default function AddTaskScreen() {
 
       <View style={styles.dateContainer}>
         <Text style={styles.dateLabel}>Due Date:</Text>
-        {Platform.OS === 'android' && (
-          <Button onPress={() => setShowDatePicker(true)} title="Select Date" />
-        )}
-        {showDatePicker || Platform.OS === 'ios' ? (
+        {/* On Android, the picker is a modal, so we show a button to open it. */}
+        {/* On iOS, the picker can be displayed inline permanently. */}
+        {Platform.OS === 'android' && <Button onPress={() => setShowDatePicker(true)} title="Select Date" />}
+        {(showDatePicker || Platform.OS === 'ios') && (
           <DateTimePicker
             testID="dateTimePicker"
             value={date}
@@ -97,7 +96,7 @@ export default function AddTaskScreen() {
             display="default"
             onChange={onDateChange}
           />
-        ) : null}
+        )}
       </View>
       <Button title={isSaving ? "Saving..." : "Save Task"} onPress={handleSave} disabled={isSaving} />
     </View>

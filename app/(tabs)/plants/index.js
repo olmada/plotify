@@ -29,7 +29,7 @@ export default function PlantListScreen() {
   }
 
   const renderItem = ({ item }) => (
-    <Link href={`/(tabs)/plants/${item.id}`} asChild>
+    <Link href={{ pathname: '/(tabs)/plants/[id]', params: { id: item.id } }} asChild>
       <Pressable style={styles.plantItem}>
         <View>
           <Text style={styles.plantName}>{item.name}</Text>

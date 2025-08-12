@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { getAllTasks, updateTask } from '../../src/services/api';
+import { getAllTasks, updateTask } from '../../../src/services/api';
 import { RRule } from 'rrule';
 
 export default function AllTasksScreen() {

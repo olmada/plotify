@@ -8,59 +8,47 @@ function InitialLayout() {
   const segments = useSegments();
   const router = useRouter();
 
+  // VALIDATION STEP: Log the state on each render.
+  console.log(`[Auth State] loading: ${loading}, session: !!${session}, segments: [${segments.join(', ')}]`);
+
   useEffect(() => {
-    // Wait for the session to load
     if (loading) return;
 
     const inTabsGroup = segments[0] === '(tabs)';
 
-    // If the user is signed in and the initial segment is not the tabs group,
-    // redirect them to the main app.
-    if (session && !inTabsGroup) {
-      router.replace('/(tabs)');
-    } 
-    // If the user is not signed in and the initial segment is in the tabs group,
-    // redirect them to the login page.
-    else if (!session && inTabsGroup) {
+    if (!session && inTabsGroup) {
       router.replace('/');
+    } else if (session && !inTabsGroup) {
+      router.replace('/(tabs)/plants');
     }
   }, [session, loading, segments]);
 
+  // This is the key to preventing the race condition.
+  // We prevent the <Stack> from rendering until we know the auth state.
   if (loading) {
-    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" /></View>;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
 
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="add"
-        options={{
-          title: 'Add New Plant',
-          presentation: 'modal',
-        }}
-      />
+      <Stack.Screen name="add" options={{ title: 'Add New Plant', presentation: 'modal' }} />
       <Stack.Screen
         name="edit-plant/[id]"
-        options={{
-          title: 'Edit Plant',
-          presentation: 'modal',
-        }}
+        options={{ title: 'Edit Plant', presentation: 'modal' }}
       />
       <Stack.Screen
         name="add-entry/[plantId]"
-        options={{
-          title: 'New Entry',
-          presentation: 'modal',
-        }}
+        options={{ title: 'New Entry', presentation: 'modal' }}
       />
       <Stack.Screen
         name="add-task/[plantId]"
-        options={{
-          title: 'New Task',
-          presentation: 'modal',
-        }}
+        options={{ title: 'New Task', presentation: 'modal' }}
       />
     </Stack>
   );
