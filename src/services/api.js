@@ -98,11 +98,11 @@ export const getTasksForPlant = async (plantId) => {
   return data;
 };
 
-export const createTask = async (plantId, taskData) => {
+export const createTask = async (taskData) => {
   const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('tasks')
-    .insert([{ ...taskData, owner_id, plant_id: plantId }])
+    .insert([{ ...taskData, owner_id }])
     .select()
     .single();
 

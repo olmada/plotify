@@ -198,7 +198,7 @@ export default function PlantDetailScreen() {
             <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
               <Button title="New Entry" />
             </Link>
-            <Link href={{ pathname: '/add-task/[plantId]', params: { plantId: id } }} asChild>
+            <Link href={{ pathname: '/add-task', params: { plantId: id } }} asChild>
               <Button title="New Task" />
             </Link>
           </View>

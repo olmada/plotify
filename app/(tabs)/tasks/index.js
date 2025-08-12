@@ -1,12 +1,13 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, Alert } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, Alert, Button } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { getAllTasks, updateTask } from '../../../src/services/api';
 import { RRule } from 'rrule';
 
 export default function AllTasksScreen() {
   const [tasks, setTasks] = React.useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
@@ -70,6 +71,7 @@ export default function AllTasksScreen() {
 
   return (
     <View style={styles.container}>
+      <Button title="New Task" onPress={() => router.push('/add-task')} />
       <Text style={styles.header}>All Upcoming Tasks</Text>
       <FlatList
         data={tasks}

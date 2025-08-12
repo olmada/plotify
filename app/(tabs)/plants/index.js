@@ -1,11 +1,13 @@
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, Button } from 'react-native';
 import { Link, useFocusEffect } from 'expo-router';
 import { getPlants } from '../../../src/services/api';
+import { useAuth } from '../../../src/context/AuthContext';
 
 export default function PlantListScreen() {
   const [plants, setPlants] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const { signOut } = useAuth();
 
   useFocusEffect(
     useCallback(() => {
@@ -40,13 +42,15 @@ export default function PlantListScreen() {
   );
 
   return (
-    <FlatList
-      data={plants}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      style={styles.container}
-      ListEmptyComponent={<Text style={styles.emptyText}>No plants yet. Add one!</Text>}
-    />
+    <View style={styles.container}>
+      <Button title="Sign Out" onPress={signOut} />
+      <FlatList
+        data={plants}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        ListEmptyComponent={<Text style={styles.emptyText}>No plants yet. Add one!</Text>}
+      />
+    </View>
   );
 }
 

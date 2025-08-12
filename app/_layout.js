@@ -19,6 +19,10 @@ function InitialLayout() {
     if (!session && inTabsGroup) {
       router.replace('/');
     } else if (session && !inTabsGroup) {
+      // Prevent redirection when opening a modal
+      if (segments[0] === 'add' || segments[0] === 'edit-plant' || segments[0] === 'add-entry' || segments[0] === 'add-task') {
+        return;
+      }
       router.replace('/(tabs)/plants');
     }
   }, [session, loading, segments]);
