@@ -1,5 +1,5 @@
-import { PropsWithChildren, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { PropsWithChildren, useState, useRef, useEffect } from 'react';
+import { StyleSheet, TouchableOpacity, View, Animated } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -7,9 +7,23 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
-export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
-  const [isOpen, setIsOpen] = useState(true); // Changed initial state to true
+export function Collapsible({ children, title, headerRight }: PropsWithChildren & { title: string, headerRight?: React.ReactNode }) {
+  const [isOpen, setIsOpen] = useState(true);
   const theme = useColorScheme() ?? 'light';
+  const rotation = useRef(new Animated.Value(isOpen ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(rotation, {
+      toValue: isOpen ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isOpen]);
+
+  const rotate = rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '90deg'],
+  });
 
   return (
     <ThemedView style={styles.cardContainer}>
@@ -17,15 +31,18 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
         style={styles.heading}
         onPress={() => setIsOpen((value) => !value)}
         activeOpacity={0.8}>
-        <IconSymbol
-          name="chevron.right"
-          size={18}
-          weight="medium"
-          color={Colors.light.icon} // Use light theme icon color
-          style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}
-        />
-
-        <ThemedText type="defaultSemiBold" style={styles.titleText}>{title}</ThemedText>
+        <View style={styles.headingLeft}>
+          <Animated.View style={{ transform: [{ rotate }] }}>
+            <IconSymbol
+              name="chevron.right"
+              size={18}
+              weight="medium"
+              color={Colors.light.icon}
+            />
+          </Animated.View>
+          <ThemedText type="defaultSemiBold" style={styles.titleText}>{title}</ThemedText>
+        </View>
+        {headerRight}
       </TouchableOpacity>
       {isOpen && <ThemedView style={styles.content}>{children}</ThemedView>}
     </ThemedView>
@@ -44,10 +61,16 @@ const styles = StyleSheet.create({
   heading: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  headingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   titleText: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333333', // Dark text for the title
   },

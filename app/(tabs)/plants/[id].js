@@ -5,16 +5,17 @@ import { getPlantById, deletePlant, getPlantTimeline, getTasksForPlant, updateTa
 import { RRule } from 'rrule';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Collapsible } from '../../../components/Collapsible';
+import Card from '../../../components/ui/Card';
+import Animated, { useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, interpolate } from 'react-native-reanimated';
+import DynamicHeader from '../../../components/DynamicHeader';
 
 // --- Helper Components ---
 
-const InfoAttribute = ({ icon, label, value }) => (
-  <View style={styles.attributeContainer}>
-    <MaterialCommunityIcons name={icon} size={24} color="#006400" style={styles.attributeIcon} />
-    <View>
-      <Text style={styles.attributeLabel}>{label}</Text>
-      <Text style={styles.attributeValue}>{value}</Text>
-    </View>
+const StatItem = ({ icon, label, value }) => (
+  <View style={styles.statItem}>
+    <MaterialCommunityIcons name={icon} size={24} color="#006400" />
+    <Text style={styles.statLabel}>{label}</Text>
+    <Text style={styles.statValue}>{value}</Text>
   </View>
 );
 
@@ -26,20 +27,22 @@ const TaskList = ({ tasks, onToggleTask, onDeleteTask }) => {
   return tasks.map((task) => {
     const isOverdue = new Date(task.due_date) < new Date() && !task.completed;
     return (
-      <View key={task.id} style={styles.taskContainer}>
-        <Pressable onPress={() => onToggleTask(task)} style={styles.taskCheckbox}>
-          {task.completed && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
-        </Pressable>
-        <View style={styles.taskTextContainer}>
-          <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>{task.title}</Text>
-          <Text style={[styles.taskDueDate, isOverdue && styles.taskDueDateOverdue]}>
-            Due: {new Date(task.due_date).toLocaleDateString()}
-          </Text>
+      <Card key={task.id} style={styles.taskCard}>
+        <View style={styles.taskContainer}>
+            <Pressable onPress={() => onToggleTask(task)} style={styles.taskCheckbox}>
+              {task.completed && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+            </Pressable>
+            <View style={styles.taskTextContainer}>
+              <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>{task.title}</Text>
+              <Text style={[styles.taskDueDate, isOverdue && styles.taskDueDateOverdue]}>
+                Due: {new Date(task.due_date).toLocaleDateString()}
+              </Text>
+            </View>
+            <Pressable onPress={() => onDeleteTask(task.id)} style={styles.deleteButton}>
+              <Ionicons name="trash-outline" size={22} color="#888" />
+            </Pressable>
         </View>
-        <Pressable onPress={() => onDeleteTask(task.id)} style={styles.deleteButton}>
-          <Ionicons name="trash-outline" size={22} color="#888" />
-        </Pressable>
-      </View>
+      </Card>
     );
   });
 };
@@ -50,7 +53,7 @@ const TimelineItem = ({ item }) => {
     const hasPhoto = item.data.photo_url || item.data.url;
 
     return (
-      <View style={styles.timelineItem}>
+      <Card style={{ padding: 0, overflow: 'hidden' }}>
         {hasPhoto && (
           <Image source={{ uri: item.data.photo_url || item.data.url }} style={styles.timelinePhoto} />
         )}
@@ -58,11 +61,31 @@ const TimelineItem = ({ item }) => {
           <Text style={styles.timelineDate}>{new Date(item.timestamp).toLocaleString()}</Text>
           {hasText && <Text style={styles.timelineText}>{item.data.text}</Text>}
         </View>
-      </View>
+      </Card>
     );
   }
   return null;
 };
+
+const PlantDetailSkeleton = () => (
+    <SafeAreaView style={styles.safeArea}>
+      <Animated.ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        <View style={[styles.heroImage, styles.skeleton]} />
+        <View style={styles.statsContainer}>
+            <View style={styles.skeletonStat} />
+            <View style={styles.skeletonStat} />
+            <View style={styles.skeletonStat} />
+        </View>
+        <Card style={styles.skeletonCard}>
+            <View style={styles.skeletonText} />
+            <View style={styles.skeletonText} />
+        </Card>
+        <Card style={styles.skeletonCard}>
+            <View style={styles.skeletonText} />
+        </Card>
+      </Animated.ScrollView>
+    </SafeAreaView>
+);
 
 
 // --- Main Screen Component ---
@@ -76,6 +99,13 @@ export default function PlantDetailScreen() {
   const [timeline, setTimeline] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statsExpanded, setStatsExpanded] = useState(false);
+
+  const scrollY = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
 
   const fetchPlantData = useCallback(async () => {
     try {
@@ -103,29 +133,10 @@ export default function PlantDetailScreen() {
   useEffect(() => {
     if (plant) {
       navigation.setOptions({
-        headerTitle: plant.name,
-        headerTitleStyle: {
-          fontSize: 24,
-          fontWeight: 'bold',
-          color: '#333',
-        },
-        headerLeft: () => (
-          <Pressable onPress={() => router.back()} style={{ marginLeft: 16 }}>
-            <Ionicons name="arrow-back" size={24} color="#006400" />
-          </Pressable>
-        ),
-        headerRight: () => (
-          <Link href={{ pathname: '/edit-plant/[id]', params: { id: id } }} asChild>
-            <Pressable>
-              <Text style={styles.headerButton}>Edit</Text>
-            </Pressable>
-          </Link>
-        ),
-        headerStyle: { backgroundColor: '#FFFFFF' }, // Light header background
-        headerTintColor: '#000000', // Dark header text
+        header: (props) => <DynamicHeader {...props} scrollY={scrollY} plantName={plant.name} plantId={id} />,
       });
     }
-  }, [navigation, plant, id, router]);
+  }, [navigation, plant, id, scrollY]);
 
   const handleDelete = () => {
     Alert.alert(
@@ -171,41 +182,59 @@ export default function PlantDetailScreen() {
   };
 
   if (loading) {
-    return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#006400" /></View>;
+    return <PlantDetailSkeleton />;
   }
 
   if (!plant) {
     return <View style={styles.container}><Text style={styles.emptyText}>Plant not found.</Text></View>;
   }
 
+  const allStats = [
+    { icon: 'seed', label: 'Planted From', value: plant.planted_from_seed ? 'Seed' : 'Seedling' },
+    plant.garden_bed && { icon: 'bed-empty', label: 'Garden Bed', value: plant.garden_bed.name },
+    plant.planted_date && { icon: 'calendar-check', label: 'Planted Date', value: new Date(plant.planted_date).toLocaleDateString() },
+    plant.transplanted_date && { icon: 'arrow-up-bold-box-outline', label: 'Transplanted Date', value: new Date(plant.transplanted_date).toLocaleDateString() },
+    plant.expected_harvest_date && { icon: 'calendar-star', label: 'Expected Harvest', value: new Date(plant.expected_harvest_date).toLocaleDateString() },
+    plant.family && { icon: 'leaf', label: 'Family', value: plant.family },
+    plant.purchase_date && { icon: 'cart', label: 'Purchase Date', value: new Date(plant.purchase_date).toLocaleDateString() },
+  ].filter(Boolean);
+
+  const displayedStats = statsExpanded ? allStats : allStats.slice(0, 3);
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        <Collapsible title="Information">
-          <View style={styles.attributesGrid}>
-            <InfoAttribute icon="seed" label="Planted From" value={plant.planted_from_seed ? 'Seed' : 'Seedling'} />
-            {plant.planted_date && <InfoAttribute icon="calendar-check" label="Planted Date" value={new Date(plant.planted_date).toLocaleDateString()} />}
-            {plant.transplanted_date && <InfoAttribute icon="arrow-up-bold-box-outline" label="Transplanted Date" value={new Date(plant.transplanted_date).toLocaleDateString()} />}
-            {plant.expected_harvest_date && <InfoAttribute icon="calendar-star" label="Expected Harvest" value={new Date(plant.expected_harvest_date).toLocaleDateString()} />}
-            {plant.family && <InfoAttribute icon="leaf" label="Family" value={plant.family} />}
-            {plant.purchase_date && <InfoAttribute icon="cart" label="Purchase Date" value={new Date(plant.purchase_date).toLocaleDateString()} />}
-            {plant.garden_bed && <InfoAttribute icon="bed-empty" label="Garden Bed" value={plant.garden_bed.name} />}
-          </View>
-          {plant.notes && (
-            <View style={styles.notesContainer}>
-              <Text style={styles.notesTitle}>Notes</Text>
-              <Text style={styles.notesText}>{plant.notes}</Text>
-            </View>
-          )}
-        </Collapsible>
+      <Animated.ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.contentContainer}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+      >
+        {/* New Hero Image */}
+        <Image 
+          source={{ uri: plant.profile_image_url || (timeline[0] && timeline[0].data.photo_url) }} 
+          style={styles.heroImage} 
+        />
 
-        <Collapsible title="Timeline">
-          <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
-            <Pressable style={styles.actionButton}>
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>New Entry</Text>
+        <View style={[styles.statsContainer, statsExpanded && styles.statsContainerExpanded]}>
+          {displayedStats.map(stat => <StatItem key={stat.label} {...stat} />)}
+        </View>
+        {allStats.length > 3 && (
+            <Pressable onPress={() => setStatsExpanded(!statsExpanded)} style={styles.showMoreButton}>
+                <Text style={styles.showMoreButtonText}>{statsExpanded ? 'Show Less' : 'Show More'}</Text>
             </Pressable>
-          </Link>
+        )}
+
+        <Collapsible 
+          title="Timeline"
+          headerRight={
+            <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
+              <Pressable style={styles.headerActionButton}>
+                <Ionicons name="add" size={16} color="#FFFFFF" />
+                <Text style={styles.headerActionButtonText}>New Entry</Text>
+              </Pressable>
+            </Link>
+          }
+        >
           {timeline.length === 0 ? (
             <Text style={styles.emptyText}>No timeline entries yet.</Text>
           ) : (
@@ -213,13 +242,17 @@ export default function PlantDetailScreen() {
           )}
         </Collapsible>
 
-        <Collapsible title="Tasks">
-          <Link href={{ pathname: '/add-task', params: { plantId: id } }} asChild>
-            <Pressable style={styles.actionButton}>
-              <Ionicons name="checkbox-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>New Task</Text>
-            </Pressable>
-          </Link>
+        <Collapsible 
+          title="Tasks"
+          headerRight={
+            <Link href={{ pathname: '/add-task', params: { plantId: id } }} asChild>
+              <Pressable style={styles.headerActionButton}>
+                <Ionicons name="checkbox-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.headerActionButtonText}>New Task</Text>
+              </Pressable>
+            </Link>
+          }
+        >
           <TaskList tasks={tasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
         </Collapsible>
 
@@ -228,12 +261,18 @@ export default function PlantDetailScreen() {
             <Text style={styles.deletePlantButtonText}>Delete Plant</Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  heroImage: {
+    width: '100%',
+    height: 250,
+    marginBottom: 24,
+    backgroundColor: '#E0E0E0',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#F5F5F5', // Light background
@@ -242,7 +281,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingVertical: 24,
+    paddingTop: 120, // Add padding for custom header
+    paddingBottom: 24,
     paddingHorizontal: 16,
   },
   loadingContainer: {
@@ -251,71 +291,62 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F5F5F5', // Light background
   },
-  headerButton: {
-    color: '#006400',
-    fontSize: 16,
-    marginRight: 8,
-  },
-  attributesGrid: {
+  statsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    backgroundColor: '#F7F7F7',
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginBottom: 12,
   },
-  attributeContainer: {
-    flexDirection: 'row',
+  statsContainerExpanded: {
+      flexWrap: 'wrap',
+      justifyContent: 'flex-start',
+  },
+  statItem: {
     alignItems: 'center',
-    width: '48%',
-    marginBottom: 20,
+    width: '30%', // For expanded view
+    marginBottom: 12, // For expanded view
   },
-  attributeIcon: {
-    marginRight: 12,
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'center',
   },
-  attributeLabel: {
+  statValue: {
     fontSize: 14,
-    color: '#666666', // Medium dark text
-    marginBottom: 2,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
   },
-  attributeValue: {
-    fontSize: 16,
-    color: '#333333', // Dark text
-    fontWeight: '500',
+  showMoreButton: {
+      alignItems: 'center',
+      padding: 8,
+      marginBottom: 12,
   },
-  notesContainer: {
-    marginTop: 8,
-    padding: 16,
-    backgroundColor: '#FFFFFF', // White background for notes card
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
+  showMoreButtonText: {
+      color: '#006400',
+      fontWeight: 'bold',
   },
-  notesTitle: {
-    fontSize: 14,
-    color: '#666666', // Medium dark text
-    marginBottom: 4,
-  },
-  notesText: {
-    fontSize: 16,
-    color: '#333333', // Dark text
-    lineHeight: 22,
-  },
-  actionButton: {
+  headerActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#006400', // Dark green accent
-    paddingVertical: 12,
-    borderRadius: 30,
-    marginBottom: 20,
+    backgroundColor: '#006400',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  actionButtonText: {
-    color: '#FFFFFF', // White text on dark green button
+  headerActionButtonText: {
+    color: '#FFFFFF',
     marginLeft: 8,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   emptyText: {
@@ -324,17 +355,11 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 16,
   },
-  timelineItem: {
-    backgroundColor: '#FFFFFF', // White background for timeline item
-    borderRadius: 12,
-    marginBottom: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-  },
   timelinePhoto: {
     width: '100%',
     aspectRatio: 16 / 9,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   timelineContent: {
     padding: 16,
@@ -349,15 +374,13 @@ const styles = StyleSheet.create({
     color: '#333333', // Dark text
     lineHeight: 22,
   },
+  taskCard: {
+    padding: 16,
+    marginBottom: 12,
+  },
   taskContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF', // White background for task item
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
   },
   taskCheckbox: {
     width: 24,
@@ -412,4 +435,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-});
+  skeleton: {
+    backgroundColor: '#E0E0E0',
+    borderRadius: 12,
+  },
+  skeletonCard: {
+    backgroundColor: '#E0E0E0',
+    marginBottom: 16,
+    borderRadius: 12,
+  },
+  skeletonText: {
+    backgroundColor: '#C0C0C0',
+    height: 20,
+    marginBottom: 10,
+    borderRadius: 4,
+  },
+  skeletonStat: {
+    backgroundColor: '#C0C0C0',
+    height: 40,
+    width: 80,
+    borderRadius: 8,
+  }
+})
