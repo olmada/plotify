@@ -20,7 +20,7 @@ function InitialLayout() {
       router.replace('/');
     } else if (session && !inTabsGroup) {
       // Prevent redirection when opening a modal
-      if (segments[0] === 'add' || segments[0] === 'edit-plant' || segments[0] === 'add-entry' || segments[0] === 'add-task') {
+      if (segments[0] === 'add' || segments[0] === 'edit-plant' || segments[0] === 'add-entry' || segments[0] === 'add-task' || segments[0] === 'add-garden-bed') {
         return;
       }
       router.replace('/(tabs)/plants');
@@ -54,6 +54,7 @@ function InitialLayout() {
         name="add-task/[plantId]"
         options={{ title: 'New Task', presentation: 'modal' }}
       />
+      <Stack.Screen name="add-garden-bed" options={{ title: 'Add New Garden Bed', presentation: 'modal' }} />
     </Stack>
   );
 }

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert, Text, Platform, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, Button, StyleSheet, Alert, Text, Platform, Pressable, Switch } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { createTask } from '../../src/services/api';
+import { createTask, getGardenBeds } from '../../src/services/api';
+import { Picker } from '@react-native-picker/picker';
 
 export default function AddTaskScreen() {
   const { plantId } = useLocalSearchParams();
@@ -14,6 +15,21 @@ export default function AddTaskScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [recurrence, setRecurrence] = useState('none'); // 'none', 'daily', 'weekly'
   const [isSaving, setIsSaving] = useState(false);
+  const [gardenBeds, setGardenBeds] = useState([]);
+  const [selectedBed, setSelectedBed] = useState(null);
+  const [applyToPlants, setApplyToPlants] = useState(false);
+
+  useEffect(() => {
+    const loadGardenBeds = async () => {
+      try {
+        const data = await getGardenBeds();
+        setGardenBeds(data);
+      } catch (error) {
+        console.error("Failed to fetch garden beds:", error);
+      }
+    };
+    loadGardenBeds();
+  }, []);
 
   const onDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -42,6 +58,8 @@ export default function AddTaskScreen() {
         notes: notes.trim(),
         due_date: date.toISOString(),
         recurring_rule: recurring_rule,
+        garden_bed_id: selectedBed,
+        apply_to_plants: applyToPlants,
       });
       router.back();
     } catch (error) {
@@ -67,6 +85,22 @@ export default function AddTaskScreen() {
         onChangeText={setNotes}
         multiline
       />
+      <Picker
+        selectedValue={selectedBed}
+        onValueChange={(itemValue) => setSelectedBed(itemValue)}
+        style={styles.picker}
+      >
+        <Picker.Item label="Select a Garden Bed..." value={null} />
+        {gardenBeds.map((bed) => (
+          <Picker.Item key={bed.id} label={bed.name} value={bed.id} />
+        ))}
+      </Picker>
+      {selectedBed && (
+        <View style={styles.checkboxContainer}>
+          <Text style={styles.checkboxLabel}>Apply to all plants in this bed?</Text>
+          <Switch value={applyToPlants} onValueChange={setApplyToPlants} />
+        </View>
+      )}
       <View style={styles.recurrenceContainer}>
         <Text style={styles.dateLabel}>Repeat:</Text>
         <View style={styles.recurrenceOptions}>
@@ -107,6 +141,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
   input: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 5, marginBottom: 20 },
   textArea: { height: 100, textAlignVertical: 'top' },
+  picker: { borderWidth: 1, borderColor: '#ccc', marginBottom: 20, borderRadius: 5 },
+  checkboxContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  checkboxLabel: { fontSize: 16 },
   dateContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 30 },
   recurrenceContainer: { marginBottom: 20 },
   recurrenceOptions: {

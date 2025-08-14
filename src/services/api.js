@@ -35,6 +35,40 @@ export const getPlantById = async (id) => {
   return data;
 };
 
+export const getGardenBeds = async () => {
+  const { data, error } = await supabase
+    .from('garden_beds')
+    .select('*')
+    .eq('active', true)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+};
+
+export const getGardenBedById = async (id) => {
+  const { data, error } = await supabase
+    .from('garden_beds')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const getPlantsByBedId = async (bedId) => {
+  const { data, error } = await supabase
+    .from('plants')
+    .select('*')
+    .eq('bed_id', bedId)
+    .eq('archived', false)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+};
+
 export const createPlant = async (plantData) => {
   const owner_id = await getUserId();
   const { data, error } = await supabase
@@ -52,6 +86,18 @@ export const updatePlant = async (id, plantData) => {
     .from('plants')
     .update(plantData)
     .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const createGardenBed = async (bedData) => {
+  const owner_id = await getUserId();
+  const { data, error } = await supabase
+    .from('garden_beds')
+    .insert([{ ...bedData, owner_id }])
     .select()
     .single();
 
@@ -78,7 +124,7 @@ export const createJournal = async (plantId, text) => {
 export const getAllTasks = async () => {
   const { data, error } = await supabase
     .from('tasks')
-    .select('*, plant:plants (name)')
+    .select('*, plant_id, garden_bed_id, plant:plants (name), garden_bed:garden_beds (name)') // Select all task fields, plant_id, garden_bed_id, and the plant/garden_bed names
     .eq('completed', false)
     .order('due_date', { ascending: true });
 
@@ -98,16 +144,57 @@ export const getTasksForPlant = async (plantId) => {
   return data;
 };
 
-export const createTask = async (taskData) => {
-  const owner_id = await getUserId();
+export const getTasksByBedId = async (bedId) => {
   const { data, error } = await supabase
     .from('tasks')
-    .insert([{ ...taskData, owner_id }])
-    .select()
-    .single();
+    .select('*, plant:plants (name)') // Select all task fields and the plant name
+    .eq('garden_bed_id', bedId)
+    .eq('completed', false) // Only fetch active tasks
+    .order('due_date', { ascending: true });
 
   if (error) throw error;
   return data;
+};
+
+export const createTask = async (taskData) => {
+  const owner_id = await getUserId();
+  const { apply_to_plants, garden_bed_id, ...rest } = taskData;
+
+  if (apply_to_plants && garden_bed_id) {
+    const plants = await getPlantsByBedId(garden_bed_id);
+    const tasksToCreate = plants.map(plant => ({
+      owner_id,
+      plant_id: plant.id,
+      garden_bed_id: garden_bed_id || rest.garden_bed_id,
+      title: rest.title,
+      notes: rest.notes,
+      due_date: rest.due_date,
+      completed: false, // Ensure new tasks are incomplete
+      recurring_rule: rest.recurring_rule,
+      reminder_sent: rest.reminder_sent,
+    }));
+    const { data, error } = await supabase.from('tasks').insert(tasksToCreate).select();
+    if (error) throw error;
+    return data;
+  } else {
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([{
+        owner_id,
+        plant_id: rest.plant_id,
+        garden_bed_id: garden_bed_id || rest.garden_bed_id,
+        title: rest.title,
+        notes: rest.notes,
+        due_date: rest.due_date,
+        completed: false, // Ensure new tasks are incomplete
+        recurring_rule: rest.recurring_rule,
+        reminder_sent: rest.reminder_sent,
+      }])
+          .select()
+          .single();
+    if (error) throw error;
+    return data;
+  }
 };
 
 export const updateTask = async (taskId, updates) => {

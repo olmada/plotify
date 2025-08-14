@@ -1,12 +1,13 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, Alert, Button } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { getAllTasks, updateTask } from '../../../src/services/api';
+import { getAllTasks, updateTask, createTask } from '../../../src/services/api';
 import { RRule } from 'rrule';
 
 export default function AllTasksScreen() {
   const [tasks, setTasks] = React.useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('incomplete'); // incomplete, completed, all
   const router = useRouter();
 
   useFocusEffect(
@@ -15,7 +16,7 @@ export default function AllTasksScreen() {
         try {
           setLoading(true);
           const data = await getAllTasks();
-          setTasks(data);
+          setTasks(data.sort((a, b) => new Date(a.due_date) - new Date(b.due_date)));
         } catch (error) {
           console.error("Failed to fetch all tasks:", error);
           Alert.alert("Error", "Could not load tasks.");
@@ -28,42 +29,83 @@ export default function AllTasksScreen() {
   );
 
   const handleToggleTask = async (task) => {
-    if (task.recurring_rule) {
-      try {
-        const rule = RRule.fromString(`DTSTART=${task.due_date}\n${task.recurring_rule}`);
-        const next = rule.after(new Date());
-        if (next) {
-          const updatedTask = await updateTask(task.id, { due_date: next.toISOString() });
-          setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t).sort((a, b) => new Date(a.due_date) - new Date(b.due_date)));
-        } else {
-          await updateTask(task.id, { completed: true });
-          setTasks(currentTasks => currentTasks.filter(t => t.id !== task.id));
-        }
-      } catch (error) {
-        Alert.alert("Error", "Could not update recurring task.");
-      }
-    } else {
-      try {
-        await updateTask(task.id, { completed: true });
-        setTasks(currentTasks => currentTasks.filter(t => t.id !== task.id));
-      } catch (error) {
-        Alert.alert("Error", "Could not update the task.");
-      }
-    }
+    Alert.alert(
+      "Confirm Task",
+      `Are you sure you want to mark "${task.title}" as complete?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Complete",
+          onPress: async () => {
+            if (task.recurring_rule) {
+              try {
+                const rule = RRule.fromString(`DTSTART=${new Date(task.due_date).toISOString().replace(/[-:]|\.\d{3}/g, '')}\n${task.recurring_rule}`);
+                const next = rule.after(new Date());
+                if (next) {
+                  // Mark current task as completed
+                  await updateTask(task.id, { completed: true, owner_id: task.owner_id });
+
+                  // Create a new task for the next recurrence
+                  const newTaskData = {
+                    ...task,
+                    bed_id: undefined, // Explicitly remove bed_id
+                    garden_bed_id: task.garden_bed_id || task.bed_id, // Ensure garden_bed_id is set
+                    due_date: next.toISOString(),
+                    completed: false, // New task is incomplete
+                    id: undefined, // Supabase will generate a new ID
+                    created_at: undefined, // Supabase will set new created_at
+                    updated_at: undefined, // Supabase will set new updated_at
+                  };
+                  const newRecurringTask = await createTask(newTaskData);
+
+                  // Update the state to reflect both changes
+                  setTasks(currentTasks => {
+                    const updated = currentTasks.map(t => t.id === task.id ? { ...t, completed: true } : t);
+                    return [...updated, newRecurringTask].sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+                  });
+
+                } else {
+                  const updatedTask = await updateTask(task.id, { completed: true });
+                  setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+                }
+              } catch (error) {
+                console.error("Error updating recurring task:", error);
+                Alert.alert("Error", "Could not update recurring task.");
+              }
+            } else {
+              try {
+                const updatedTask = await updateTask(task.id, { completed: !task.completed });
+                setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+              } catch (error) {
+                Alert.alert("Error", "Could not update the task.");
+              }
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
     return <ActivityIndicator style={styles.container} size="large" />;
   }
 
+  const filteredTasks = tasks.filter(task => {
+    if (filter === 'completed') return task.completed;
+    if (filter === 'incomplete') return !task.completed;
+    return true;
+  });
+
   const renderTask = ({ item }) => (
-    <View style={styles.taskContainer}>
+    <View style={[styles.taskContainer, item.completed && styles.completedTaskContainer]}>
       <Pressable onPress={() => handleToggleTask(item)} style={styles.taskCheckbox}>
-        {/* This will now render the inner checkmark when a recurring task is completed */}
+        {item.completed && <View style={styles.taskCheckboxInner} />}
       </Pressable>
       <View style={styles.taskTextContainer}>
-        <Text style={styles.taskTitle}>{item.title}</Text>
-        <Text style={styles.taskPlantName}>{item.plant?.name || 'General Task'}</Text>
+        <Text style={[styles.taskTitle, item.completed && styles.completedTaskText]}>{item.title}</Text>
+        <Text style={styles.taskPlantName}>
+          {item.plant?.name || item.bed?.name || 'General Task'}
+        </Text>
         <Text style={styles.taskDueDate}>Due: {new Date(item.due_date).toLocaleDateString()}</Text>
       </View>
     </View>
@@ -71,13 +113,18 @@ export default function AllTasksScreen() {
 
   return (
     <View style={styles.container}>
-      <Button title="New Task" onPress={() => router.push('/add-task')} />
+      <View style={styles.buttonGroup}>
+        <Button title="New Task" onPress={() => router.push('/add-task')} />
+        <Button title="Incomplete" onPress={() => setFilter('incomplete')} disabled={filter === 'incomplete'} />
+        <Button title="Completed" onPress={() => setFilter('completed')} disabled={filter === 'completed'} />
+        <Button title="All" onPress={() => setFilter('all')} disabled={filter === 'all'} />
+      </View>
       <Text style={styles.header}>All Upcoming Tasks</Text>
       <FlatList
-        data={tasks}
+        data={filteredTasks}
         renderItem={renderTask}
         keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text style={styles.emptyText}>No upcoming tasks!</Text>}
+        ListEmptyComponent={<Text style={styles.emptyText}>No tasks in this category.</Text>}
       />
     </View>
   );
@@ -86,6 +133,7 @@ export default function AllTasksScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#fff' },
   header: { fontSize: 28, fontWeight: 'bold', marginBottom: 20, paddingTop: 40 },
+  buttonGroup: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
   taskContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -95,6 +143,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#eee',
+  },
+  completedTaskContainer: {
+    backgroundColor: '#e0e0e0',
+  },
+  completedTaskText: {
+    textDecorationLine: 'line-through',
+    color: '#999',
   },
   taskCheckbox: {
     width: 24,

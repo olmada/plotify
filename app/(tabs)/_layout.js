@@ -1,11 +1,15 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../src/context/AuthContext';
+import { Pressable, Text } from 'react-native';
 
 export default function TabsLayout() {
+  const { signOut } = useAuth();
+
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // The header is now handled by the inner stack
+        headerShown: true, // Show header for all tabs
       }}
     >
       <Tabs.Screen
@@ -13,6 +17,18 @@ export default function TabsLayout() {
         options={{
           title: 'Plants',
           tabBarIcon: ({ color, size }) => <Ionicons name="leaf-outline" size={size} color={color} />,
+          headerRight: () => (
+            <Pressable onPress={signOut} style={{ marginRight: 15 }}>
+              <Text style={{ color: '#007AFF', fontSize: 16 }}>Sign Out</Text>
+            </Pressable>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="garden-beds"
+        options={{
+          title: 'Garden Beds',
+          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

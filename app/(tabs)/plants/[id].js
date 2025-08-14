@@ -194,12 +194,17 @@ export default function PlantDetailScreen() {
           <Text style={styles.notes}>{plant.notes}</Text>
 
           <View style={styles.buttonContainer}>
-            {/* This button now navigates to a unified entry screen */}
             <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
-              <Button title="New Entry" />
+              <Pressable style={styles.actionButton}>
+                <Ionicons name="add-circle-outline" size={20} color="#fff" />
+                <Text style={styles.actionButtonText}>New Entry</Text>
+              </Pressable>
             </Link>
             <Link href={{ pathname: '/add-task', params: { plantId: id } }} asChild>
-              <Button title="New Task" />
+              <Pressable style={styles.actionButton}>
+                <Ionicons name="checkbox-outline" size={20} color="#fff" />
+                <Text style={styles.actionButtonText}>New Task</Text>
+              </Pressable>
             </Link>
           </View>
 
@@ -241,17 +246,30 @@ const styles = StyleSheet.create({
   },
   notes: {
     fontSize: 16,
-    marginBottom: 20,
+    marginBottom: 10, // Reduced margin
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 20,
+    marginBottom: 10, // Reduced margin
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+  },
+  actionButtonText: {
+    color: '#fff',
+    marginLeft: 10,
+    fontSize: 16,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 20,
+    marginTop: 10, // Reduced margin
     marginBottom: 10,
   },
   timelinePhoto: {
