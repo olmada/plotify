@@ -1,36 +1,74 @@
 import { useLocalSearchParams, useNavigation, Link, useFocusEffect, useRouter } from 'expo-router';
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Button, Alert, Image, FlatList, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert, Image, ScrollView, Pressable, SafeAreaView } from 'react-native';
 import { getPlantById, deletePlant, getPlantTimeline, getTasksForPlant, updateTask, deleteTask } from '../../../src/services/api';
 import { RRule } from 'rrule';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Collapsible } from '../../../components/Collapsible';
 
-// By defining the TaskList component outside of PlantDetailScreen,
-// we prevent it from being re-created on every render, which is more performant.
+// --- Helper Components ---
+
+const InfoAttribute = ({ icon, label, value }) => (
+  <View style={styles.attributeContainer}>
+    <MaterialCommunityIcons name={icon} size={24} color="#006400" style={styles.attributeIcon} />
+    <View>
+      <Text style={styles.attributeLabel}>{label}</Text>
+      <Text style={styles.attributeValue}>{value}</Text>
+    </View>
+  </View>
+);
+
 const TaskList = ({ tasks, onToggleTask, onDeleteTask }) => {
   if (tasks.length === 0) {
-    return <Text style={styles.emptyText}>No tasks yet. Add one!</Text>;
+    return <Text style={styles.emptyText}>No tasks here. Well done!</Text>;
   }
 
-  return tasks.map((task) => (
-    <View key={task.id} style={styles.taskContainer}>
-      <Pressable onPress={() => onToggleTask(task)} style={styles.taskCheckbox}>
-        {task.completed && <View style={styles.taskCheckboxInner} />}
-      </Pressable>
-      <View style={styles.taskTextContainer}>
-        <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>{task.title}</Text>
-        <Text style={styles.taskDueDate}>Due: {new Date(task.due_date).toLocaleDateString()}</Text>
+  return tasks.map((task) => {
+    const isOverdue = new Date(task.due_date) < new Date() && !task.completed;
+    return (
+      <View key={task.id} style={styles.taskContainer}>
+        <Pressable onPress={() => onToggleTask(task)} style={styles.taskCheckbox}>
+          {task.completed && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+        </Pressable>
+        <View style={styles.taskTextContainer}>
+          <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>{task.title}</Text>
+          <Text style={[styles.taskDueDate, isOverdue && styles.taskDueDateOverdue]}>
+            Due: {new Date(task.due_date).toLocaleDateString()}
+          </Text>
+        </View>
+        <Pressable onPress={() => onDeleteTask(task.id)} style={styles.deleteButton}>
+          <Ionicons name="trash-outline" size={22} color="#888" />
+        </Pressable>
       </View>
-      <Pressable onPress={() => onDeleteTask(task.id)} style={styles.deleteButton}>
-        <Ionicons name="trash-outline" size={22} color="#ff3b30" />
-      </Pressable>
-    </View>
-  ));
+    );
+  });
 };
+
+const TimelineItem = ({ item }) => {
+  if (item.type === 'journal' || item.type === 'photo') {
+    const hasText = item.data.text && item.data.text.trim().length > 0;
+    const hasPhoto = item.data.photo_url || item.data.url;
+
+    return (
+      <View style={styles.timelineItem}>
+        {hasPhoto && (
+          <Image source={{ uri: item.data.photo_url || item.data.url }} style={styles.timelinePhoto} />
+        )}
+        <View style={styles.timelineContent}>
+          <Text style={styles.timelineDate}>{new Date(item.timestamp).toLocaleString()}</Text>
+          {hasText && <Text style={styles.timelineText}>{item.data.text}</Text>}
+        </View>
+      </View>
+    );
+  }
+  return null;
+};
+
+
+// --- Main Screen Component ---
 
 export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams();
-  // Use `useNavigation` to get access to the navigation object for setting screen options.
   const navigation = useNavigation();
   const router = useRouter();
 
@@ -42,7 +80,6 @@ export default function PlantDetailScreen() {
   const fetchPlantData = useCallback(async () => {
     try {
       setLoading(true);
-      // Fetch plant details and the new unified timeline concurrently
       const [plantData, timelineData, tasksData] = await Promise.all([
         getPlantById(id),
         getPlantTimeline(id),
@@ -59,46 +96,51 @@ export default function PlantDetailScreen() {
     }
   }, [id]);
 
-  // useFocusEffect runs every time the screen comes into focus.
-  // It must be wrapped in a useCallback as per the hook's API.
-  useFocusEffect(
-    useCallback(() => {
-      fetchPlantData();
-    }, [fetchPlantData])
-  );
+  useFocusEffect(useCallback(() => {
+    fetchPlantData();
+  }, [fetchPlantData]));
 
-  // Set header options dynamically after the plant data (and id) is available.
   useEffect(() => {
     if (plant) {
       navigation.setOptions({
+        headerTitle: plant.name,
+        headerTitleStyle: {
+          fontSize: 24,
+          fontWeight: 'bold',
+          color: '#333',
+        },
+        headerLeft: () => (
+          <Pressable onPress={() => router.back()} style={{ marginLeft: 16 }}>
+            <Ionicons name="arrow-back" size={24} color="#006400" />
+          </Pressable>
+        ),
         headerRight: () => (
           <Link href={{ pathname: '/edit-plant/[id]', params: { id: id } }} asChild>
-            <Button title="Edit" />
+            <Pressable>
+              <Text style={styles.headerButton}>Edit</Text>
+            </Pressable>
           </Link>
         ),
+        headerStyle: { backgroundColor: '#FFFFFF' }, // Light header background
+        headerTintColor: '#000000', // Dark header text
       });
     }
-  }, [navigation, plant, id]);
+  }, [navigation, plant, id, router]);
 
   const handleDelete = () => {
     Alert.alert(
       "Delete Plant",
-      "Are you sure you want to permanently delete this plant and all its data? This action cannot be undone.",
+      "Are you sure you want to permanently delete this plant and all its data?",
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           onPress: async () => {
             try {
               await deletePlant(id);
-              Alert.alert("Success", "Plant deleted.");
-              router.replace('/(tabs)/plants/'); // Go back to the list and remove this page from history
+              router.replace('/(tabs)/plants/');
             } catch (error) {
               Alert.alert("Error", "Could not delete the plant.");
-              console.error("Deletion error:", error);
             }
           },
           style: "destructive",
@@ -108,244 +150,266 @@ export default function PlantDetailScreen() {
   };
 
   const handleToggleTask = async (task) => {
-    // If the task is recurring, calculate the next due date
     if (task.recurring_rule) {
-      try {
-        // The start date for recurrence is the current due date
         const rule = RRule.fromString(`DTSTART=${task.due_date}\n${task.recurring_rule}`);
         const next = rule.after(new Date());
-
-        // If there is a next date, update the task. Otherwise, this will be null.
         const updatedTask = next ? await updateTask(task.id, { due_date: next.toISOString() }) : null;
-
-        // If the task was updated, replace it in the list. Otherwise, filter it out (mark as complete).
         setTasks(currentTasks => 
           updatedTask 
             ? currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t).sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
             : currentTasks.filter(t => t.id !== task.id)
         );
-      } catch (error) {
-        Alert.alert("Error", "Could not update recurring task.");
-        console.error("Recurring task update error:", error);
-      }
     } else {
-      // This block handles non-recurring tasks.
-      try {
-        await updateTask(task.id, { completed: true });
-        setTasks(currentTasks => currentTasks.filter(t => t.id !== task.id));
-      } catch (error) {
-        Alert.alert("Error", "Could not update the task.");
-      }
+      await updateTask(task.id, { completed: true });
+      setTasks(currentTasks => currentTasks.filter(t => t.id !== task.id));
     }
   };
 
   const handleDeleteTask = async (taskId) => {
-    try {
-      await deleteTask(taskId);
-      setTasks(currentTasks => currentTasks.filter(t => t.id !== taskId));
-    } catch (error) {
-      Alert.alert("Error", "Could not delete the task.");
-    }
+    await deleteTask(taskId);
+    setTasks(currentTasks => currentTasks.filter(t => t.id !== taskId));
   };
 
   if (loading) {
-    return <ActivityIndicator style={styles.container} size="large" />;
+    return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#006400" /></View>;
   }
 
   if (!plant) {
-    return (
-      <View style={styles.container}>
-        <Text>Plant not found.</Text>
-      </View>
-    );
+    return <View style={styles.container}><Text style={styles.emptyText}>Plant not found.</Text></View>;
   }
 
-  const renderTimelineItem = ({ item }) => {
-    switch (item.type) {
-      case 'photo':
-        return <Image source={{ uri: item.data.url }} style={styles.timelinePhoto} />;
-      case 'journal':
-        return (
-          <View style={styles.journalEntry}>
-            {/* If the journal entry has a photo, display it */}
-            {item.data.photo_url && (
-              <Image source={{ uri: item.data.photo_url }} style={styles.timelinePhoto} />
-            )}
-            <Text style={styles.journalDate}>{new Date(item.timestamp).toLocaleString()}</Text>
-            {/* Only render the text if it exists */}
-            {item.data.text && <Text style={styles.journalText}>{item.data.text}</Text>}
-          </View>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
-    <FlatList
-      style={styles.container}
-      data={timeline}
-      keyExtractor={(item) => item.id}
-      renderItem={renderTimelineItem}
-      ListHeaderComponent={
-        <>
-          <Text style={styles.title}>{plant.name}</Text>
-          <Text style={styles.subtitle}>{plant.variety?.common_name}</Text>
-          <Text style={styles.notes}>{plant.notes}</Text>
-
-          <View style={styles.buttonContainer}>
-            <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
-              <Pressable style={styles.actionButton}>
-                <Ionicons name="add-circle-outline" size={20} color="#fff" />
-                <Text style={styles.actionButtonText}>New Entry</Text>
-              </Pressable>
-            </Link>
-            <Link href={{ pathname: '/add-task', params: { plantId: id } }} asChild>
-              <Pressable style={styles.actionButton}>
-                <Ionicons name="checkbox-outline" size={20} color="#fff" />
-                <Text style={styles.actionButtonText}>New Task</Text>
-              </Pressable>
-            </Link>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        <Collapsible title="Information">
+          <View style={styles.attributesGrid}>
+            <InfoAttribute icon="seed" label="Planted From" value={plant.planted_from_seed ? 'Seed' : 'Seedling'} />
+            {plant.planted_date && <InfoAttribute icon="calendar-check" label="Planted Date" value={new Date(plant.planted_date).toLocaleDateString()} />}
+            {plant.transplanted_date && <InfoAttribute icon="arrow-up-bold-box-outline" label="Transplanted Date" value={new Date(plant.transplanted_date).toLocaleDateString()} />}
+            {plant.expected_harvest_date && <InfoAttribute icon="calendar-star" label="Expected Harvest" value={new Date(plant.expected_harvest_date).toLocaleDateString()} />}
+            {plant.family && <InfoAttribute icon="leaf" label="Family" value={plant.family} />}
+            {plant.purchase_date && <InfoAttribute icon="cart" label="Purchase Date" value={new Date(plant.purchase_date).toLocaleDateString()} />}
+            {plant.garden_bed && <InfoAttribute icon="bed-empty" label="Garden Bed" value={plant.garden_bed.name} />}
           </View>
+          {plant.notes && (
+            <View style={styles.notesContainer}>
+              <Text style={styles.notesTitle}>Notes</Text>
+              <Text style={styles.notesText}>{plant.notes}</Text>
+            </View>
+          )}
+        </Collapsible>
 
-          <Text style={styles.sectionTitle}>Timeline</Text>
-        </>
-      }
-      ListEmptyComponent={
-        <Text style={styles.emptyText}>No photos or journal entries yet. Add one!</Text>
-      }
-      ListFooterComponent={
-        <>
-          <Text style={styles.sectionTitle}>Tasks</Text>
-          {/* Use the new TaskList sub-component */}
+        <Collapsible title="Timeline">
+          <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
+            <Pressable style={styles.actionButton}>
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>New Entry</Text>
+            </Pressable>
+          </Link>
+          {timeline.length === 0 ? (
+            <Text style={styles.emptyText}>No timeline entries yet.</Text>
+          ) : (
+            timeline.map((item) => <TimelineItem key={item.id} item={item} />)
+          )}
+        </Collapsible>
+
+        <Collapsible title="Tasks">
+          <Link href={{ pathname: '/add-task', params: { plantId: id } }} asChild>
+            <Pressable style={styles.actionButton}>
+              <Ionicons name="checkbox-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>New Task</Text>
+            </Pressable>
+          </Link>
           <TaskList tasks={tasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+        </Collapsible>
 
-          <View style={styles.dangerZone}>
-            <Button title="Delete Plant" onPress={handleDelete} color="#ff3b30" />
-          </View>
-        </>
-      }
-    />
+        <View style={styles.dangerZone}>
+          <Pressable onPress={handleDelete} style={styles.deletePlantButton}>
+            <Text style={styles.deletePlantButtonText}>Delete Plant</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F5F5F5', // Light background
+  },
   container: {
     flex: 1,
-    padding: 16,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  contentContainer: {
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5', // Light background
+  },
+  headerButton: {
+    color: '#006400',
+    fontSize: 16,
+    marginRight: 8,
+  },
+  attributesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  attributeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%',
+    marginBottom: 20,
+  },
+  attributeIcon: {
+    marginRight: 12,
+  },
+  attributeLabel: {
+    fontSize: 14,
+    color: '#666666', // Medium dark text
+    marginBottom: 2,
+  },
+  attributeValue: {
+    fontSize: 16,
+    color: '#333333', // Dark text
+    fontWeight: '500',
+  },
+  notesContainer: {
+    marginTop: 8,
+    padding: 16,
+    backgroundColor: '#FFFFFF', // White background for notes card
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+  },
+  notesTitle: {
+    fontSize: 14,
+    color: '#666666', // Medium dark text
     marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 18,
-    color: 'gray',
-    marginBottom: 16,
-  },
-  notes: {
+  notesText: {
     fontSize: 16,
-    marginBottom: 10, // Reduced margin
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 10, // Reduced margin
+    color: '#333333', // Dark text
+    lineHeight: 22,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    justifyContent: 'center',
+    backgroundColor: '#006400', // Dark green accent
+    paddingVertical: 12,
+    borderRadius: 30,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   actionButtonText: {
-    color: '#fff',
-    marginLeft: 10,
+    color: '#FFFFFF', // White text on dark green button
+    marginLeft: 8,
     fontSize: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 10, // Reduced margin
-    marginBottom: 10,
-  },
-  timelinePhoto: {
-    width: '100%',
-    aspectRatio: 4 / 3, // Maintain aspect ratio
-    borderRadius: 8,
-    marginBottom: 12, // Add margin bottom to separate from text if both exist
   },
   emptyText: {
     textAlign: 'center',
-    marginTop: 20,
-    color: 'gray'
+    marginVertical: 20,
+    color: '#888',
+    fontSize: 16,
   },
-  journalEntry: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+  timelineItem: {
+    backgroundColor: '#FFFFFF', // White background for timeline item
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#EEEEEE',
   },
-  journalDate: {
+  timelinePhoto: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+  },
+  timelineContent: {
+    padding: 16,
+  },
+  timelineDate: {
     fontSize: 12,
-    color: 'gray',
-    marginBottom: 4,
+    color: '#666666', // Medium dark text
+    marginBottom: 8,
   },
-  journalText: { fontSize: 16, lineHeight: 22 },
+  timelineText: {
+    fontSize: 16,
+    color: '#333333', // Dark text
+    lineHeight: 22,
+  },
   taskContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF', // White background for task item
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#EEEEEE',
   },
   taskCheckbox: {
     width: 24,
     height: 24,
-    borderRadius: 4,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#007AFF',
-    marginRight: 12,
+    borderColor: '#006400', // Dark green border
+    backgroundColor: '#006400', // Dark green background when checked
+    marginRight: 16,
     justifyContent: 'center',
- alignItems: 'center',
-  },
-  taskCheckboxInner: {
-    width: 14,
-    height: 14,
-    backgroundColor: '#007AFF',
-    borderRadius: 2,
+    alignItems: 'center',
   },
   taskTextContainer: {
     flex: 1,
   },
   taskTitle: {
     fontSize: 16,
-    fontWeight: '500',
+    color: '#333333', // Dark text
   },
   taskTitleCompleted: {
     textDecorationLine: 'line-through',
-    color: 'gray',
+    color: '#888',
   },
   taskDueDate: {
     fontSize: 12,
-    color: 'gray',
-    marginTop: 2,
+    color: '#666666', // Medium dark text
+    marginTop: 4,
+  },
+  taskDueDateOverdue: {
+    color: '#E57373',
+    fontWeight: 'bold',
   },
   deleteButton: {
-    padding: 5,
+    padding: 4,
   },
   dangerZone: {
     marginTop: 40,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#EEEEEE',
+    alignItems: 'center',
+  },
+  deletePlantButton: {
+    borderWidth: 1,
+    borderColor: '#E57373',
+    borderRadius: 30,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  deletePlantButtonText: {
+    color: '#E57373',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

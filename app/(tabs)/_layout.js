@@ -15,13 +15,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="plants" // This now points to the `plants` directory
         options={{
-          title: 'Plants',
+          title: '',
           tabBarIcon: ({ color, size }) => <Ionicons name="leaf-outline" size={size} color={color} />,
-          headerRight: () => (
-            <Pressable onPress={signOut} style={{ marginRight: 15 }}>
-              <Text style={{ color: '#007AFF', fontSize: 16 }}>Sign Out</Text>
-            </Pressable>
-          ),
         }}
       />
       <Tabs.Screen
@@ -41,4 +36,3 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
-

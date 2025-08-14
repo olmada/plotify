@@ -26,7 +26,8 @@ export const getPlantById = async (id) => {
     .from('plants')
     .select(`
       *,
-      variety:plant_varieties (common_name)
+      variety:plant_varieties (common_name),
+      garden_bed:garden_beds (name)
     `)
     .eq('id', id)
     .single();
@@ -60,7 +61,7 @@ export const getGardenBedById = async (id) => {
 export const getPlantsByBedId = async (bedId) => {
   const { data, error } = await supabase
     .from('plants')
-    .select('*')
+    .select('*, variety:plant_varieties(common_name)')
     .eq('bed_id', bedId)
     .eq('archived', false)
     .order('created_at', { ascending: false });

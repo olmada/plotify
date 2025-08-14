@@ -8,7 +8,7 @@ export default function PlantsStackLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'My Plants' }} />
-      <Stack.Screen name="[id]" options={{ title: 'Plant Details' }} />
+      <Stack.Screen name="[id]" />
     </Stack>
   );
 }

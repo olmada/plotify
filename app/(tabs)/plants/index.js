@@ -1,12 +1,15 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
-import { Link, useFocusEffect, useRouter } from 'expo-router';
+import { Link, useFocusEffect, useRouter, useNavigation } from 'expo-router';
 import { getPlants } from '../../../src/services/api';
+import { useAuth } from '../../../src/context/AuthContext';
 
 export default function PlantListScreen() {
   const [plants, setPlants] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const router = useRouter();
+  const navigation = useNavigation();
+  const { signOut } = useAuth();
 
   useFocusEffect(
     useCallback(() => {
@@ -24,6 +27,16 @@ export default function PlantListScreen() {
       loadPlants();
     }, [])
   );
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable onPress={signOut} style={{ marginRight: 15 }}>
+          <Text style={{ color: '#007AFF', fontSize: 16 }}>Sign Out</Text>
+        </Pressable>
+      ),
+    });
+  }, [navigation, signOut]);
 
   if (loading) {
     return <ActivityIndicator style={styles.container} size="large" />;
