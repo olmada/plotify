@@ -4,7 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
 import { Link, useRouter } from 'expo-router';
 
-const DynamicHeader = ({ scrollY, plantName, plantId }) => {
+const DynamicHeader = ({ scrollY, plantId }) => {
   const router = useRouter();
 
   const animatedHeaderStyle = useAnimatedStyle(() => {
@@ -16,22 +16,12 @@ const DynamicHeader = ({ scrollY, plantName, plantId }) => {
     };
   });
 
-  const animatedTitleStyle = useAnimatedStyle(() => {
-    const fontSize = interpolate(scrollY.value, [0, 100], [28, 18], 'clamp');
-    const top = interpolate(scrollY.value, [0, 100], [70, 50], 'clamp');
-    return {
-      fontSize,
-      top,
-    };
-  });
-
   return (
     <Animated.View style={[styles.header, animatedHeaderStyle]}>
       <View style={styles.headerContent}>
         <Pressable onPress={() => router.back()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color="#006400" />
         </Pressable>
-        <Animated.Text style={[styles.title, animatedTitleStyle]}>{plantName}</Animated.Text>
         <Link href={{ pathname: '/edit-plant/[id]', params: { id: plantId } }} asChild>
           <Pressable style={styles.headerEditButton}>
             <MaterialCommunityIcons name="pencil" size={16} color="#FFFFFF" />
@@ -62,14 +52,6 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 8,
-  },
-  title: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    fontWeight: 'bold',
-    color: '#333',
   },
   headerEditButton: {
     flexDirection: 'row',

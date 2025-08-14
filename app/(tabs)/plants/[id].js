@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useNavigation, Link, useFocusEffect, useRouter } from 'expo-router';
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, Image, ScrollView, Pressable, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert, Image, ScrollView, Pressable, SafeAreaView, ImageBackground } from 'react-native';
 import { getPlantById, deletePlant, getPlantTimeline, getTasksForPlant, updateTask, deleteTask } from '../../../src/services/api';
 import { RRule } from 'rrule';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { Collapsible } from '../../../components/Collapsible';
 import Card from '../../../components/ui/Card';
 import Animated, { useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, interpolate } from 'react-native-reanimated';
 import DynamicHeader from '../../../components/DynamicHeader';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // --- Helper Components ---
 
@@ -121,7 +122,8 @@ export default function PlantDetailScreen() {
     } catch (error) {
       Alert.alert("Error", "Failed to fetch plant details.");
       console.error(error);
-    } finally {
+    }
+ finally {
       setLoading(false);
     }
   }, [id]);
@@ -203,17 +205,23 @@ export default function PlantDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <DynamicHeader scrollY={scrollY} plantId={id} />
       <Animated.ScrollView 
         style={styles.container} 
         contentContainerStyle={styles.contentContainer}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        {/* New Hero Image */}
-        <Image 
-          source={{ uri: plant.profile_image_url || (timeline[0] && timeline[0].data.photo_url) }} 
-          style={styles.heroImage} 
-        />
+        <ImageBackground
+          source={{ uri: plant.profile_image_url || (timeline[0] && timeline[0].data.photo_url) }}
+          style={styles.heroContainer}
+        >
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.6)']}
+            style={styles.gradient}
+          />
+          <Text style={styles.heroTitle}>{plant.name}</Text>
+        </ImageBackground>
 
         <View style={[styles.statsContainer, statsExpanded && styles.statsContainerExpanded]}>
           {displayedStats.map(stat => <StatItem key={stat.label} {...stat} />)}
@@ -226,6 +234,7 @@ export default function PlantDetailScreen() {
 
         <Collapsible 
           title="Timeline"
+          containerStyle={{ marginTop: 12 }}
           headerRight={
             <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
               <Pressable style={styles.headerActionButton}>
@@ -236,7 +245,14 @@ export default function PlantDetailScreen() {
           }
         >
           {timeline.length === 0 ? (
-            <Text style={styles.emptyText}>No timeline entries yet.</Text>
+            <View style={styles.emptyStateContainer}>
+              <Text style={styles.emptyText}>No entries yet.</Text>
+              <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
+                <Pressable style={styles.emptyStateButton}>
+                  <Text style={styles.emptyStateButtonText}>Add Your First Entry</Text>
+                </Pressable>
+              </Link>
+            </View>
           ) : (
             timeline.map((item) => <TimelineItem key={item.id} item={item} />)
           )}
@@ -267,11 +283,23 @@ export default function PlantDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  heroImage: {
-    width: '100%',
-    height: 250,
+  heroContainer: {
+    height: 300,
+    justifyContent: 'flex-end',
+    padding: 16,
     marginBottom: 24,
-    backgroundColor: '#E0E0E0',
+  },
+  gradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '70%',
+  },
+  heroTitle: {
+    color: 'white',
+    fontSize: 28,
+    fontWeight: 'bold',
   },
   safeArea: {
     flex: 1,
@@ -297,7 +325,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 12,
     paddingVertical: 12,
-    marginBottom: 12,
+    marginBottom: 24,
   },
   statsContainerExpanded: {
       flexWrap: 'wrap',
@@ -455,5 +483,21 @@ const styles = StyleSheet.create({
     height: 40,
     width: 80,
     borderRadius: 8,
-  }
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  emptyStateButton: {
+    backgroundColor: '#006400',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 30,
+    marginTop: 16,
+  },
+  emptyStateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 })
