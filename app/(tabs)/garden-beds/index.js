@@ -1,7 +1,9 @@
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, Button } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { getGardenBeds } from '../../../src/services/api';
+import { Ionicons } from '@expo/vector-icons';
+import Card from '../../../components/ui/Card';
 
 export default function GardenBedListScreen() {
   const [gardenBeds, setGardenBeds] = React.useState([]);
@@ -31,21 +33,29 @@ export default function GardenBedListScreen() {
 
   const renderItem = ({ item }) => (
     <Link href={{ pathname: '/(tabs)/garden-beds/[id]', params: { id: item.id } }} asChild>
-      <Pressable style={styles.gardenBedItem}>
-        <Text style={styles.gardenBedName}>{item.name}</Text>
+      <Pressable>
+        <Card style={styles.gardenBedItem}>
+          <Text style={styles.gardenBedName}>{item.name}</Text>
+        </Card>
       </Pressable>
     </Link>
   );
 
   return (
     <View style={styles.container}>
-      <Button title="New Garden Bed" onPress={() => router.push('/add-garden-bed')} />
+      <View style={styles.header}>
+        <Text style={styles.title}>Garden Beds</Text>
+      </View>
       <FlatList
         data={gardenBeds}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
         ListEmptyComponent={<Text style={styles.emptyText}>No garden beds yet. Add one!</Text>}
       />
+      <Pressable style={styles.fab} onPress={() => router.push('/add-garden-bed')}>
+        <Ionicons name="add" size={32} color="white" />
+      </Pressable>
     </View>
   );
 }
@@ -53,16 +63,51 @@ export default function GardenBedListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    padding: 20,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   gardenBedItem: {
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   gardenBedName: {
     fontSize: 18,
     fontWeight: '500',
   },
   emptyText: { textAlign: 'center', marginTop: 50, color: 'gray', fontSize: 16 },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    backgroundColor: '#007AFF',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
 });

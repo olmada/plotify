@@ -6,8 +6,6 @@ import { RRule } from 'rrule';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Collapsible } from '../../../components/Collapsible';
 import Card from '../../../components/ui/Card';
-import Animated, { useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, interpolate } from 'react-native-reanimated';
-import DynamicHeader from '../../../components/DynamicHeader';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // --- Helper Components ---
@@ -70,7 +68,7 @@ const TimelineItem = ({ item }) => {
 
 const PlantDetailSkeleton = () => (
     <SafeAreaView style={styles.safeArea}>
-      <Animated.ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         <View style={[styles.heroImage, styles.skeleton]} />
         <View style={styles.statsContainer}>
             <View style={styles.skeletonStat} />
@@ -84,7 +82,7 @@ const PlantDetailSkeleton = () => (
         <Card style={styles.skeletonCard}>
             <View style={styles.skeletonText} />
         </Card>
-      </Animated.ScrollView>
+      </ScrollView>
     </SafeAreaView>
 );
 
@@ -101,12 +99,6 @@ export default function PlantDetailScreen() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statsExpanded, setStatsExpanded] = useState(false);
-
-  const scrollY = useSharedValue(0);
-
-  const scrollHandler = useAnimatedScrollHandler((event) => {
-    scrollY.value = event.contentOffset.y;
-  });
 
   const fetchPlantData = useCallback(async () => {
     try {
@@ -131,14 +123,6 @@ export default function PlantDetailScreen() {
   useFocusEffect(useCallback(() => {
     fetchPlantData();
   }, [fetchPlantData]));
-
-  useEffect(() => {
-    if (plant) {
-      navigation.setOptions({
-        header: (props) => <DynamicHeader {...props} scrollY={scrollY} plantName={plant.name} plantId={id} />,
-      });
-    }
-  }, [navigation, plant, id, scrollY]);
 
   const handleDelete = () => {
     Alert.alert(
@@ -184,7 +168,7 @@ export default function PlantDetailScreen() {
   };
 
   if (loading) {
-    return <PlantDetailSkeleton />;
+    return <PlantDetailSkeleton />; 
   }
 
   if (!plant) {
@@ -205,17 +189,30 @@ export default function PlantDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <DynamicHeader scrollY={scrollY} plantId={id} />
-      <Animated.ScrollView 
+      <ScrollView 
         style={styles.container} 
         contentContainerStyle={styles.contentContainer}
-        onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
         <ImageBackground
           source={{ uri: plant.profile_image_url || (timeline[0] && timeline[0].data.photo_url) }}
           style={styles.heroContainer}
         >
+          <LinearGradient
+            colors={['rgba(0,0,0,0.6)', 'transparent']}
+            style={styles.headerGradient}
+          />
+          <View style={styles.headerButtons}>
+            <Pressable onPress={() => router.back()} style={styles.headerButton}>
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </Pressable>
+            <Link href={{ pathname: '/edit-plant/[id]', params: { id: id } }} asChild>
+              <Pressable style={styles.headerEditButton}>
+                <MaterialCommunityIcons name="pencil" size={16} color="#FFFFFF" />
+                <Text style={styles.headerEditButtonText}>Edit</Text>
+              </Pressable>
+            </Link>
+          </View>
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.6)']}
             style={styles.gradient}
@@ -277,7 +274,7 @@ export default function PlantDetailScreen() {
             <Text style={styles.deletePlantButtonText}>Delete Plant</Text>
           </Pressable>
         </View>
-      </Animated.ScrollView>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -285,9 +282,8 @@ export default function PlantDetailScreen() {
 const styles = StyleSheet.create({
   heroContainer: {
     height: 300,
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     padding: 16,
-    marginBottom: 24,
   },
   gradient: {
     position: 'absolute',
@@ -295,6 +291,36 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: '70%',
+  },
+  headerGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: '30%',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 16,
+  },
+  headerButton: {
+    padding: 8,
+  },
+  headerEditButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  headerEditButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 6,
   },
   heroTitle: {
     color: 'white',
@@ -309,7 +335,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingTop: 120, // Add padding for custom header
     paddingBottom: 24,
     paddingHorizontal: 16,
   },
@@ -325,7 +350,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 12,
     paddingVertical: 12,
-    marginBottom: 24,
+    marginTop: -24, // Pull stats up over the image
+    marginHorizontal: 8,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   statsContainerExpanded: {
       flexWrap: 'wrap',

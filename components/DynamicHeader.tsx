@@ -20,7 +20,7 @@ const DynamicHeader = ({ scrollY, plantId }) => {
     <Animated.View style={[styles.header, animatedHeaderStyle]}>
       <View style={styles.headerContent}>
         <Pressable onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color="#006400" />
+          <Ionicons name="arrow-back" size={24} color="white" />
         </Pressable>
         <Link href={{ pathname: '/edit-plant/[id]', params: { id: plantId } }} asChild>
           <Pressable style={styles.headerEditButton}>

@@ -1,30 +1,34 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { Link, useFocusEffect, useRouter, useNavigation } from 'expo-router';
-import { getPlants } from '../../../src/services/api';
+import { getPlants, getAllTasks } from '../../../src/services/api';
 import { useAuth } from '../../../src/context/AuthContext';
+import Card from '../../../components/ui/Card';
 
 export default function PlantListScreen() {
-  const [plants, setPlants] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
+  const [plants, setPlants] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const navigation = useNavigation();
-  const { signOut } = useAuth();
+  const { session, signOut } = useAuth();
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [plantData, taskData] = await Promise.all([getPlants(), getAllTasks()]);
+      setPlants(plantData);
+      setTasks(taskData.filter(t => !t.completed));
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
-      const loadPlants = async () => {
-        try {
-          setLoading(true);
-          const data = await getPlants();
-          setPlants(data);
-        } catch (error) {
-          console.error("Failed to fetch plants:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadPlants();
+      loadData();
     }, [])
   );
 
@@ -38,28 +42,40 @@ export default function PlantListScreen() {
     });
   }, [navigation, signOut]);
 
+  const userName = session?.user?.email?.split('@')[0] || 'Gardener';
+
   if (loading) {
     return <ActivityIndicator style={styles.container} size="large" />;
   }
 
   const renderItem = ({ item }) => (
     <Link href={{ pathname: '/(tabs)/plants/[id]', params: { id: item.id } }} asChild>
-      <Pressable style={styles.plantItem}>
-        <View>
-          <Text style={styles.plantName}>{item.name}</Text>
-          <Text style={styles.plantVariety}>{item.variety?.common_name || 'Unknown Variety'}</Text>
-        </View>
+      <Pressable>
+        <Card style={styles.plantItem}>
+          <View>
+            <Text style={styles.plantName}>{item.name}</Text>
+            <Text style={styles.plantVariety}>{item.variety?.common_name || 'Unknown Variety'}</Text>
+          </View>
+        </Card>
       </Pressable>
     </Link>
   );
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.welcomeMessage}>Hello, {userName}!</Text>
+        <View style={styles.summaryContainer}>
+          <Text style={styles.summaryText}>You have {plants.length} active plants.</Text>
+          <Text style={styles.summaryText}>Upcoming Tasks: {tasks.length}</Text>
+        </View>
+      </View>
       <FlatList
         data={plants}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={<Text style={styles.emptyText}>No plants yet. Add one!</Text>}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
       />
       <Pressable style={styles.fab} onPress={() => router.push('/add')}>
         <Text style={styles.fabText}>+</Text>
@@ -71,12 +87,37 @@ export default function PlantListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    padding: 20,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  welcomeMessage: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  summaryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  summaryText: {
+    fontSize: 16,
+    color: 'gray',
   },
   plantItem: {
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   plantName: {
     fontSize: 18,

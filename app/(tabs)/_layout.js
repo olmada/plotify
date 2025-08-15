@@ -15,7 +15,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="plants" // This now points to the `plants` directory
         options={{
-          title: '',
+          title: 'Plants',
+          tabBarLabel: 'Plants',
           tabBarIcon: ({ color, size }) => <Ionicons name="leaf-outline" size={size} color={color} />,
         }}
       />

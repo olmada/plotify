@@ -1,8 +1,10 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, Alert, Button } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { getAllTasks, updateTask, createTask } from '../../../src/services/api';
 import { RRule } from 'rrule';
+import Card from '../../../components/ui/Card';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function AllTasksScreen() {
   const [tasks, setTasks] = React.useState([]);
@@ -42,28 +44,22 @@ export default function AllTasksScreen() {
                 const rule = RRule.fromString(`DTSTART=${new Date(task.due_date).toISOString().replace(/[-:]|\.\d{3}/g, '')}\n${task.recurring_rule}`);
                 const next = rule.after(new Date());
                 if (next) {
-                  // Mark current task as completed
                   await updateTask(task.id, { completed: true, owner_id: task.owner_id });
-
-                  // Create a new task for the next recurrence
                   const newTaskData = {
                     ...task,
-                    bed_id: undefined, // Explicitly remove bed_id
-                    garden_bed_id: task.garden_bed_id || task.bed_id, // Ensure garden_bed_id is set
+                    bed_id: undefined,
+                    garden_bed_id: task.garden_bed_id || task.bed_id,
                     due_date: next.toISOString(),
-                    completed: false, // New task is incomplete
-                    id: undefined, // Supabase will generate a new ID
-                    created_at: undefined, // Supabase will set new created_at
-                    updated_at: undefined, // Supabase will set new updated_at
+                    completed: false,
+                    id: undefined,
+                    created_at: undefined,
+                    updated_at: undefined,
                   };
                   const newRecurringTask = await createTask(newTaskData);
-
-                  // Update the state to reflect both changes
                   setTasks(currentTasks => {
                     const updated = currentTasks.map(t => t.id === task.id ? { ...t, completed: true } : t);
                     return [...updated, newRecurringTask].sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
                   });
-
                 } else {
                   const updatedTask = await updateTask(task.id, { completed: true });
                   setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
@@ -97,7 +93,7 @@ export default function AllTasksScreen() {
   });
 
   const renderTask = ({ item }) => (
-    <View style={[styles.taskContainer, item.completed && styles.completedTaskContainer]}>
+    <Card style={[styles.taskContainer, item.completed && styles.completedTaskContainer]}>
       <Pressable onPress={() => handleToggleTask(item)} style={styles.taskCheckbox}>
         {item.completed && <View style={styles.taskCheckboxInner} />}
       </Pressable>
@@ -108,68 +104,83 @@ export default function AllTasksScreen() {
         </Text>
         <Text style={styles.taskDueDate}>Due: {new Date(item.due_date).toLocaleDateString()}</Text>
       </View>
-    </View>
+    </Card>
   );
 
   return (
     <View style={styles.container}>
-      <View style={styles.buttonGroup}>
-        <Button title="New Task" onPress={() => router.push('/add-task')} />
-        <Button title="Incomplete" onPress={() => setFilter('incomplete')} disabled={filter === 'incomplete'} />
-        <Button title="Completed" onPress={() => setFilter('completed')} disabled={filter === 'completed'} />
-        <Button title="All" onPress={() => setFilter('all')} disabled={filter === 'all'} />
+      <View style={styles.header}>
+        <Text style={styles.title}>Tasks</Text>
       </View>
-      <Text style={styles.header}>All Upcoming Tasks</Text>
+      <View style={styles.filterContainer}>
+        <Pressable style={[styles.filterButton, filter === 'incomplete' && styles.activeFilter]} onPress={() => setFilter('incomplete')}> 
+          <Text style={styles.filterButtonText}>Incomplete</Text>
+        </Pressable>
+        <Pressable style={[styles.filterButton, filter === 'completed' && styles.activeFilter]} onPress={() => setFilter('completed')}> 
+          <Text style={styles.filterButtonText}>Completed</Text>
+        </Pressable>
+        <Pressable style={[styles.filterButton, filter === 'all' && styles.activeFilter]} onPress={() => setFilter('all')}> 
+          <Text style={styles.filterButtonText}>All</Text>
+        </Pressable>
+      </View>
       <FlatList
         data={filteredTasks}
         renderItem={renderTask}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
         ListEmptyComponent={<Text style={styles.emptyText}>No tasks in this category.</Text>}
       />
+      <Pressable style={styles.fab} onPress={() => router.push('/add-task')}>
+        <Ionicons name="add" size={32} color="white" />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  header: { fontSize: 28, fontWeight: 'bold', marginBottom: 20, paddingTop: 40 },
-  buttonGroup: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  header: { padding: 20, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  title: { fontSize: 24, fontWeight: 'bold' },
+  filterContainer: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10 },
+  filterButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#eee' },
+  activeFilter: { backgroundColor: '#007AFF' },
+  filterButtonText: { color: '#000', fontWeight: 'bold' },
   taskContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9f9f9',
     padding: 15,
     marginBottom: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#eee',
+    borderRadius: 12,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  completedTaskContainer: {
-    backgroundColor: '#e0e0e0',
-  },
-  completedTaskText: {
-    textDecorationLine: 'line-through',
-    color: '#999',
-  },
-  taskCheckbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    marginRight: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  taskCheckboxInner: {
-    width: 14,
-    height: 14,
-    backgroundColor: '#007AFF',
-    borderRadius: 2,
-  },
+  completedTaskContainer: { backgroundColor: '#e0e0e0' },
+  completedTaskText: { textDecorationLine: 'line-through', color: '#999' },
+  taskCheckbox: { width: 24, height: 24, borderRadius: 4, borderWidth: 2, borderColor: '#007AFF', marginRight: 15, justifyContent: 'center', alignItems: 'center' },
+  taskCheckboxInner: { width: 14, height: 14, backgroundColor: '#007AFF', borderRadius: 2 },
   taskTextContainer: { flex: 1 },
   taskTitle: { fontSize: 18, fontWeight: '500' },
   taskPlantName: { fontSize: 14, color: 'gray', marginVertical: 2 },
   taskDueDate: { fontSize: 12, color: 'gray' },
   emptyText: { textAlign: 'center', marginTop: 50, color: 'gray', fontSize: 16 },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    backgroundColor: '#007AFF',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
 });
