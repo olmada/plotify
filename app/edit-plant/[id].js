@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert, ActivityIndicator, Text } from 'react-native';
+import { View, TextInput, Button, StyleSheet, Alert, ActivityIndicator, Text, ScrollView, Switch } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getPlantById, updatePlant, getGardenBeds } from '../../src/services/api';
 import { Picker } from '@react-native-picker/picker';
+
+const PLANT_FAMILIES = [
+  { label: "Select Plant Family...", value: null },
+  { label: "Solanaceae (Tomatoes, Eggplants, Peppers, Potatoes)", value: "Solanaceae" },
+  { label: "Cucurbitaceae (Cucumbers, Squashes, Melons)", value: "Cucurbitaceae" },
+  { label: "Brassicaceae (Broccoli, Cabbage, Kale, Radishes)", value: "Brassicaceae" },
+  { label: "Fabaceae (Beans, Peas, Lentils)", value: "Fabaceae" },
+  { label: "Apiaceae (Carrots, Celery, Parsley)", value: "Apiaceae" },
+  { label: "Asteraceae (Lettuce, Sunflowers, Artichokes)", value: "Asteraceae" },
+  { label: "Liliaceae (Onions, Garlic, Leeks)", value: "Liliaceae" },
+  { label: "Poaceae (Corn, Wheat, Rice)", value: "Poaceae" },
+  { label: "Rosaceae (Apples, Pears, Strawberries, Roses)", value: "Rosaceae" },
+  { label: "Other", value: "Other" },
+];
 
 export default function EditPlantScreen() {
   const { id } = useLocalSearchParams();
@@ -10,6 +24,14 @@ export default function EditPlantScreen() {
 
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
+  const [plantedFromSeed, setPlantedFromSeed] = useState(false); // true for seed, false for seedling
+  const [seedPurchasedFrom, setSeedPurchasedFrom] = useState('');
+  const [family, setFamily] = useState(null); // Changed to null for Picker
+  const [daysToHarvest, setDaysToHarvest] = useState('');
+  const [plantedDate, setPlantedDate] = useState(''); // This is "Seed Planted Date"
+  const [transplantedDate, setTransplantedDate] = useState('');
+  const [expectedHarvestDate, setExpectedHarvestDate] = useState('');
+
   const [gardenBeds, setGardenBeds] = useState([]);
   const [selectedBed, setSelectedBed] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +51,13 @@ export default function EditPlantScreen() {
           setName(plant.name);
           setNotes(plant.notes || '');
           setSelectedBed(plant.bed_id); // Pre-select the plant's current bed
+          setPlantedFromSeed(plant.planted_from_seed || false);
+          setSeedPurchasedFrom(plant.seed_purchased_from || '');
+          setFamily(plant.family || '');
+          setDaysToHarvest(plant.days_to_harvest ? String(plant.days_to_harvest) : '');
+          setPlantedDate(plant.planted_date || '');
+          setTransplantedDate(plant.transplanted_date || '');
+          setExpectedHarvestDate(plant.expected_harvest_date || '');
         }
         setGardenBeds(beds);
       } catch (error) {
@@ -42,6 +71,28 @@ export default function EditPlantScreen() {
     fetchData();
   }, [id]);
 
+  // Effect for calculating Expected Harvest Date
+  useEffect(() => {
+    if (transplantedDate && daysToHarvest) {
+      const transplant = new Date(transplantedDate);
+      if (!isNaN(transplant.getTime())) {
+        const harvestDays = parseInt(daysToHarvest);
+        if (!isNaN(harvestDays)) {
+          const expectedHarvest = new Date(transplant);
+          expectedHarvest.setDate(transplant.getDate() + harvestDays);
+          setExpectedHarvestDate(expectedHarvest.toISOString().split('T')[0]); // Format YYYY-MM-DD
+        } else {
+          setExpectedHarvestDate('');
+        }
+      } else {
+        setExpectedHarvestDate('');
+      }
+    } else {
+      setExpectedHarvestDate('');
+    }
+  }, [transplantedDate, daysToHarvest]);
+
+
   const handleUpdate = async () => {
     if (!name.trim()) {
       Alert.alert("Validation Error", "Please enter a name for the plant.");
@@ -49,7 +100,19 @@ export default function EditPlantScreen() {
     }
 
     try {
-      await updatePlant(id, { name, notes, bed_id: selectedBed });
+      const plantData = {
+        name,
+        notes,
+        bed_id: selectedBed,
+        planted_from_seed: plantedFromSeed,
+        seed_purchased_from: plantedFromSeed ? seedPurchasedFrom : null, // Only save if planted from seed
+        family,
+        days_to_harvest: daysToHarvest ? parseInt(daysToHarvest) : null,
+        planted_date: plantedFromSeed ? plantedDate || null : null, // Only save if planted from seed
+        transplanted_date: transplantedDate || null,
+        expected_harvest_date: expectedHarvestDate || null,
+      };
+      await updatePlant(id, plantData);
       Alert.alert("Success", "Plant updated successfully!");
       router.back(); // Go back to the detail screen
     } catch (error) {
@@ -63,20 +126,69 @@ export default function EditPlantScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <TextInput
         style={styles.input}
         placeholder="Plant Name"
         value={name}
         onChangeText={setName}
       />
+
+      <View style={styles.row}>
+        <Text style={styles.label}>Planted from Seed:</Text>
+        <Switch
+          onValueChange={setPlantedFromSeed}
+          value={plantedFromSeed}
+        />
+      </View>
+
+      {plantedFromSeed && (
+        <>
+          <TextInput
+            style={styles.input}
+            placeholder="Seed Purchased From"
+            value={seedPurchasedFrom}
+            onChangeText={setSeedPurchasedFrom}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Seed Planted Date (YYYY-MM-DD)"
+            value={plantedDate}
+            onChangeText={setPlantedDate}
+          />
+        </>
+      )}
+
+      <Picker
+        selectedValue={family}
+        onValueChange={(itemValue) => setFamily(itemValue)}
+        style={styles.picker}
+      >
+        {PLANT_FAMILIES.map((item, index) => (
+          <Picker.Item key={index} label={item.label} value={item.value} />
+        ))}
+      </Picker>
       <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="Notes"
-        value={notes}
-        onChangeText={setNotes}
-        multiline
+        style={styles.input}
+        placeholder="Days to Harvest (e.g., 90)"
+        value={daysToHarvest}
+        onChangeText={setDaysToHarvest}
+        keyboardType="numeric"
       />
+      <TextInput
+        style={styles.input}
+        placeholder="Transplanted Date (YYYY-MM-DD)"
+        value={transplantedDate}
+        onChangeText={setTransplantedDate}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Expected Harvest Date (YYYY-MM-DD)"
+        value={expectedHarvestDate}
+        editable={false} // This field is calculated
+        onChangeText={setExpectedHarvestDate} // Still need onChangeText for consistency, but it won't be user-editable
+      />
+      
       <Picker
         selectedValue={selectedBed}
         onValueChange={(itemValue) => setSelectedBed(itemValue)}
@@ -87,14 +199,32 @@ export default function EditPlantScreen() {
           <Picker.Item key={bed.id} label={bed.name} value={bed.id} />
         ))}
       </Picker>
+      <TextInput
+        style={[styles.input, styles.textArea]}
+        placeholder="Notes"
+        value={notes}
+        onChangeText={setNotes}
+        multiline
+      />
       <Button title="Save Changes" onPress={handleUpdate} />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: '#fff' },
+  contentContainer: { padding: 20, paddingBottom: 40 }, // Added paddingBottom
   input: { borderWidth: 1, borderColor: '#ccc', padding: 12, marginBottom: 20, borderRadius: 5 },
   textArea: { height: 100, textAlignVertical: 'top' },
   picker: { borderWidth: 1, borderColor: '#ccc', marginBottom: 20, borderRadius: 5 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    justifyContent: 'space-between', // To push label and switch to ends
+  },
+  label: {
+    fontSize: 16,
+    marginRight: 10,
+  },
 });
