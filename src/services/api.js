@@ -10,10 +10,11 @@ const getUserId = async () => {
 };
 
 export const getPlants = async () => {
+  const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('plants')
-    // V-- Add 'created_at' here --V
     .select('id, name, created_at, variety_id(common_name)')
+    .eq('owner_id', owner_id)
     .eq('archived', false)
     .order('created_at', { ascending: false });
 
@@ -22,6 +23,7 @@ export const getPlants = async () => {
 };
 
 export const getPlantById = async (id) => {
+  const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('plants')
     .select(`
@@ -30,6 +32,7 @@ export const getPlantById = async (id) => {
       garden_bed:garden_beds (name)
     `)
     .eq('id', id)
+    .eq('owner_id', owner_id)
     .single();
 
   if (error) throw error;
@@ -37,9 +40,11 @@ export const getPlantById = async (id) => {
 };
 
 export const getGardenBeds = async () => {
+  const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('garden_beds')
     .select('*')
+    .eq('owner_id', owner_id)
     .eq('active', true)
     .order('created_at', { ascending: false });
 
@@ -48,10 +53,12 @@ export const getGardenBeds = async () => {
 };
 
 export const getGardenBedById = async (id) => {
+  const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('garden_beds')
     .select('*')
     .eq('id', id)
+    .eq('owner_id', owner_id)
     .single();
 
   if (error) throw error;
@@ -59,10 +66,12 @@ export const getGardenBedById = async (id) => {
 };
 
 export const getPlantsByBedId = async (bedId) => {
+  const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('plants')
     .select('*, variety:plant_varieties(common_name)')
     .eq('bed_id', bedId)
+    .eq('owner_id', owner_id)
     .eq('archived', false)
     .order('created_at', { ascending: false });
 
@@ -83,10 +92,12 @@ export const createPlant = async (plantData) => {
 };
 
 export const updatePlant = async (id, plantData) => {
+  const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('plants')
     .update(plantData)
     .eq('id', id)
+    .eq('owner_id', owner_id)
     .select()
     .single();
 
@@ -123,9 +134,11 @@ export const createJournal = async (plantId, text) => {
 };
 
 export const getAllTasks = async () => {
+  const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('tasks')
     .select('*, plant_id, garden_bed_id, plant:plants (name), garden_bed:garden_beds (name)') // Select all task fields, plant_id, garden_bed_id, and the plant/garden_bed names
+    .eq('owner_id', owner_id)
     .eq('completed', false)
     .order('due_date', { ascending: true });
 
@@ -134,10 +147,12 @@ export const getAllTasks = async () => {
 };
 
 export const getTasksForPlant = async (plantId) => {
+  const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
     .eq('plant_id', plantId)
+    .eq('owner_id', owner_id)
     .eq('completed', false) // Only fetch active tasks
     .order('due_date', { ascending: true });
 
@@ -146,10 +161,12 @@ export const getTasksForPlant = async (plantId) => {
 };
 
 export const getTasksByBedId = async (bedId) => {
+  const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('tasks')
     .select('*, plant:plants (name)') // Select all task fields and the plant name
     .eq('garden_bed_id', bedId)
+    .eq('owner_id', owner_id)
     .eq('completed', false) // Only fetch active tasks
     .order('due_date', { ascending: true });
 
@@ -199,10 +216,12 @@ export const createTask = async (taskData) => {
 };
 
 export const updateTask = async (taskId, updates) => {
+  const owner_id = await getUserId();
   const { data, error } = await supabase
     .from('tasks')
     .update(updates)
     .eq('id', taskId)
+    .eq('owner_id', owner_id)
     .select()
     .single();
 
@@ -211,7 +230,8 @@ export const updateTask = async (taskId, updates) => {
 };
 
 export const deleteTask = async (taskId) => {
-  const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+  const owner_id = await getUserId();
+  const { error } = await supabase.from('tasks').delete().eq('id', taskId).eq('owner_id', owner_id);
 
   if (error) throw error;
 };
@@ -246,7 +266,7 @@ export const deletePlant = async (plantId) => {
   }
 
   // 2. Delete the plant record. RLS and CASCADE will handle related table rows.
-  const { error: deleteError } = await supabase.from('plants').delete().eq('id', plantId);
+  const { error: deleteError } = await supabase.from('plants').delete().eq('id', plantId).eq('owner_id', owner_id);
 
   if (deleteError) {
     throw deleteError;

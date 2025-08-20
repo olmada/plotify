@@ -18,6 +18,21 @@ const PLANT_FAMILIES = [
   { label: "Other", value: "Other" },
 ];
 
+const calculateExpectedHarvestDate = (transplantedDate, daysToHarvest) => {
+  if (transplantedDate && daysToHarvest) {
+    const transplant = new Date(transplantedDate);
+    if (!isNaN(transplant.getTime())) {
+      const harvestDays = parseInt(daysToHarvest);
+      if (!isNaN(harvestDays)) {
+        const expectedHarvest = new Date(transplant);
+        expectedHarvest.setDate(transplant.getDate() + harvestDays);
+        return expectedHarvest.toISOString().split('T')[0]; // Format YYYY-MM-DD
+      }
+    }
+  }
+  return '';
+};
+
 export default function AddPlantScreen() {
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
@@ -48,23 +63,7 @@ export default function AddPlantScreen() {
 
   // Effect for calculating Expected Harvest Date
   useEffect(() => {
-    if (transplantedDate && daysToHarvest) {
-      const transplant = new Date(transplantedDate);
-      if (!isNaN(transplant.getTime())) {
-        const harvestDays = parseInt(daysToHarvest);
-        if (!isNaN(harvestDays)) {
-          const expectedHarvest = new Date(transplant);
-          expectedHarvest.setDate(transplant.getDate() + harvestDays);
-          setExpectedHarvestDate(expectedHarvest.toISOString().split('T')[0]); // Format YYYY-MM-DD
-        } else {
-          setExpectedHarvestDate('');
-        }
-      } else {
-        setExpectedHarvestDate('');
-      }
-    } else {
-      setExpectedHarvestDate('');
-    }
+    setExpectedHarvestDate(calculateExpectedHarvestDate(transplantedDate, daysToHarvest));
   }, [transplantedDate, daysToHarvest]);
 
   const handleSave = async () => {

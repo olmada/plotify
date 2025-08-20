@@ -30,6 +30,46 @@ export default function AllTasksScreen() {
     }, [])
   );
 
+  const handleRecurringTask = async (task) => {
+    try {
+      const rule = RRule.fromString(`DTSTART=${new Date(task.due_date).toISOString().replace(/[-:]|\.\d{3}/g, '')}\n${task.recurring_rule}`);
+      const next = rule.after(new Date());
+      if (next) {
+        await updateTask(task.id, { completed: true, owner_id: task.owner_id });
+        const newTaskData = {
+          ...task,
+          bed_id: undefined,
+          garden_bed_id: task.garden_bed_id || task.bed_id,
+          due_date: next.toISOString(),
+          completed: false,
+          id: undefined,
+          created_at: undefined,
+          updated_at: undefined,
+        };
+        const newRecurringTask = await createTask(newTaskData);
+        setTasks(currentTasks => {
+          const updated = currentTasks.map(t => t.id === task.id ? { ...t, completed: true } : t);
+          return [...updated, newRecurringTask].sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+        });
+      } else {
+        const updatedTask = await updateTask(task.id, { completed: true });
+        setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+      }
+    } catch (error) {
+      console.error("Error updating recurring task:", error);
+      Alert.alert("Error", "Could not update recurring task.");
+    }
+  };
+
+  const handleNonRecurringTask = async (task) => {
+    try {
+      const updatedTask = await updateTask(task.id, { completed: !task.completed });
+      setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+    } catch (error) {
+      Alert.alert("Error", "Could not update the task.");
+    }
+  };
+
   const handleToggleTask = async (task) => {
     Alert.alert(
       "Confirm Task",
@@ -38,43 +78,11 @@ export default function AllTasksScreen() {
         { text: "Cancel", style: "cancel" },
         {
           text: "Complete",
-          onPress: async () => {
+          onPress: () => {
             if (task.recurring_rule) {
-              try {
-                const rule = RRule.fromString(`DTSTART=${new Date(task.due_date).toISOString().replace(/[-:]|\.\d{3}/g, '')}\n${task.recurring_rule}`);
-                const next = rule.after(new Date());
-                if (next) {
-                  await updateTask(task.id, { completed: true, owner_id: task.owner_id });
-                  const newTaskData = {
-                    ...task,
-                    bed_id: undefined,
-                    garden_bed_id: task.garden_bed_id || task.bed_id,
-                    due_date: next.toISOString(),
-                    completed: false,
-                    id: undefined,
-                    created_at: undefined,
-                    updated_at: undefined,
-                  };
-                  const newRecurringTask = await createTask(newTaskData);
-                  setTasks(currentTasks => {
-                    const updated = currentTasks.map(t => t.id === task.id ? { ...t, completed: true } : t);
-                    return [...updated, newRecurringTask].sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
-                  });
-                } else {
-                  const updatedTask = await updateTask(task.id, { completed: true });
-                  setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
-                }
-              } catch (error) {
-                console.error("Error updating recurring task:", error);
-                Alert.alert("Error", "Could not update recurring task.");
-              }
+              handleRecurringTask(task);
             } else {
-              try {
-                const updatedTask = await updateTask(task.id, { completed: !task.completed });
-                setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
-              } catch (error) {
-                Alert.alert("Error", "Could not update the task.");
-              }
+              handleNonRecurringTask(task);
             }
           },
         },

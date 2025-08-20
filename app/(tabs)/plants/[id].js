@@ -47,23 +47,20 @@ const TaskList = ({ tasks, onToggleTask, onDeleteTask }) => {
 };
 
 const TimelineItem = ({ item }) => {
-  if (item.type === 'journal' || item.type === 'photo') {
-    const hasText = item.data.text && item.data.text.trim().length > 0;
-    const hasPhoto = item.data.photo_url || item.data.url;
+  const hasText = item.data.text && item.data.text.trim().length > 0;
+  const hasPhoto = item.data.photo_url || item.data.url;
 
-    return (
-      <Card style={{ padding: 0, overflow: 'hidden' }}>
-        {hasPhoto && (
-          <Image source={{ uri: item.data.photo_url || item.data.url }} style={styles.timelinePhoto} />
-        )}
-        <View style={styles.timelineContent}>
-          <Text style={styles.timelineDate}>{new Date(item.timestamp).toLocaleString()}</Text>
-          {hasText && <Text style={styles.timelineText}>{item.data.text}</Text>}
-        </View>
-      </Card>
-    );
-  }
-  return null;
+  return (
+    <Card style={{ padding: 0, overflow: 'hidden' }}>
+      {hasPhoto && (
+        <Image source={{ uri: item.data.photo_url || item.data.url }} style={styles.timelinePhoto} />
+      )}
+      <View style={styles.timelineContent}>
+        <Text style={styles.timelineDate}>{new Date(item.timestamp).toLocaleString()}</Text>
+        {hasText && <Text style={styles.timelineText}>{item.data.text}</Text>}
+      </View>
+    </Card>
+  );
 };
 
 const PlantDetailSkeleton = () => (
@@ -109,7 +106,7 @@ export default function PlantDetailScreen() {
         getTasksForPlant(id),
       ]);
       setPlant(plantData);
-      setTimeline(timelineData);
+      setTimeline(timelineData.filter(item => item.type === 'journal' || item.type === 'photo'));
       setTasks(tasksData);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch plant details.");
