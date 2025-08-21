@@ -10,7 +10,6 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to Plotify!</Text>
       <Text style={styles.email}>{session?.user?.email}</Text>
-      <Button title="Sign Out" onPress={signOut} />
     </View>
   );
 }

@@ -11,7 +11,7 @@ export default function PlantListScreen() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { session, signOut } = useAuth();
+  const { session } = useAuth();
 
   const loadData = async () => {
     try {
@@ -44,7 +44,6 @@ export default function PlantListScreen() {
         userName={userName}
         plantsCount={plants.length}
         tasksCount={tasks.length}
-        onSignOut={signOut}
       />
       <PlantList plants={plants} />
       <Pressable style={styles.fab} onPress={() => router.push('/add')}>

@@ -2,14 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useAuth } from '../src/context/AuthContext';
 
-const HomeScreenHeader = ({ userName, plantsCount, tasksCount, onSignOut }) => {
+const HomeScreenHeader = ({ userName, plantsCount, tasksCount }) => {
   return (
     <View style={styles.header}>
       <View style={styles.headerTop}>
         <Text style={styles.welcomeMessage}>Hello, {userName}!</Text>
-        <Pressable onPress={onSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </Pressable>
       </View>
       <View style={styles.summaryContainer}>
         <Text style={styles.summaryText}>You have {plantsCount} active plants.</Text>
