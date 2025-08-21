@@ -1,23 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, Button, StyleSheet, Alert, ActivityIndicator, Text, ScrollView, Switch, Pressable, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getPlantById, updatePlant, getGardenBeds, getPlants } from '../../src/services/api';
-import { Picker } from '@react-native-picker/picker';
+import { getPlantById, updatePlant, getPlants } from '../../src/services/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
-
-const PLANT_FAMILIES = [
-  { label: "Select Plant Family...", value: null },
-  { label: "Solanaceae (Tomatoes, Eggplants, Peppers, Potatoes)", value: "Solanaceae" },
-  { label: "Cucurbitaceae (Cucumbers, Squashes, Melons)", value: "Cucurbitaceae" },
-  { label: "Brassicaceae (Broccoli, Cabbage, Kale, Radishes)", value: "Brassicaceae" },
-  { label: "Fabaceae (Beans, Peas, Lentils)", value: "Fabaceae" },
-  { label: "Apiaceae (Carrots, Celery, Parsley)", value: "Apiaceae" },
-  { label: "Asteraceae (Lettuce, Sunflowers, Artichokes)", value: "Asteraceae" },
-  { label: "Liliaceae (Onions, Garlic, Leeks)", value: "Liliaceae" },
-  { label: "Poaceae (Corn, Wheat, Rice)", value: "Poaceae" },
-  { label: "Rosaceae (Apples, Pears, Strawberries, Roses)", value: "Rosaceae" },
-  { label: "Other", value: "Other" },
-];
 
 export default function EditPlantScreen() {
   const { id } = useLocalSearchParams();
@@ -36,9 +21,6 @@ export default function EditPlantScreen() {
   const [showPlantedDatePicker, setShowPlantedDatePicker] = useState(false);
   const [showTransplantedDatePicker, setShowTransplantedDatePicker] = useState(false);
 
-  const [gardenBeds, setGardenBeds] = useState([]);
-  const [seedSources, setSeedSources] = useState([]);
-  const [showNewSeedSourceInput, setShowNewSeedSourceInput] = useState(false);
   const [selectedBed, setSelectedBed] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -48,9 +30,8 @@ export default function EditPlantScreen() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [plant, beds, allPlants] = await Promise.all([
+        const [plant, allPlants] = await Promise.all([
           getPlantById(id),
-          getGardenBeds(),
           getPlants(),
         ]);
 
@@ -67,9 +48,6 @@ export default function EditPlantScreen() {
           setTransplantedDate(plant.transplanted_date ? new Date(plant.transplanted_date) : new Date());
           setExpectedHarvestDate(plant.expected_harvest_date || '');
         }
-        setGardenBeds(beds);
-        const sources = [...new Set(allPlants.map(p => p.seed_purchased_from).filter(Boolean))];
-        setSeedSources(sources);
       } catch (error) {
         Alert.alert("Error", "Failed to fetch data.");
         console.error(error);
@@ -142,7 +120,10 @@ export default function EditPlantScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <TextInput style={styles.input} placeholder="Plant Name" value={name} onChangeText={setName} />
+      <View style={styles.formField}>
+        <Text style={styles.label}>Plant Name</Text>
+        <TextInput style={styles.input} value={name} onChangeText={setName} />
+      </View>
 
       <View style={styles.row}>
         <Text style={styles.label}>Planted from Seed:</Text>
@@ -151,38 +132,20 @@ export default function EditPlantScreen() {
 
       {plantedFromSeed ? (
         <>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={seedPurchasedFrom}
-              onValueChange={(itemValue) => {
-                if (itemValue === 'create_new') {
-                  setShowNewSeedSourceInput(true);
-                  setSeedPurchasedFrom('');
-                } else {
-                  setShowNewSeedSourceInput(false);
-                  setSeedPurchasedFrom(itemValue);
-                }
-              }}
-              style={styles.picker}
-            >
-              <Picker.Item label="Select a source..." value={null} />
-              {seedSources.map((source, index) => (
-                <Picker.Item key={index} label={source} value={source} />
-              ))}
-              <Picker.Item label="Create New Source" value="create_new" />
-            </Picker>
-          </View>
-          {showNewSeedSourceInput && (
+          <View style={styles.formField}>
+            <Text style={styles.label}>Seed Purchased From</Text>
             <TextInput
               style={styles.input}
-              placeholder="New Seed Source"
               value={seedPurchasedFrom}
               onChangeText={setSeedPurchasedFrom}
             />
-          )}
-          <Pressable onPress={() => setShowPlantedDatePicker(true)} style={styles.dateButton}>
-            <Text style={styles.dateButtonText}>Seed Planted Date: {plantedDate.toLocaleDateString()}</Text>
-          </Pressable>
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.label}>Seed Planted Date</Text>
+            <Pressable onPress={() => setShowPlantedDatePicker(true)} style={styles.dateButton}>
+              <Text style={styles.dateButtonText}>{plantedDate.toLocaleDateString()}</Text>
+            </Pressable>
+          </View>
           {showPlantedDatePicker && (
             <DateTimePicker
               value={plantedDate}
@@ -193,27 +156,36 @@ export default function EditPlantScreen() {
           )}
         </>
       ) : (
-        <TextInput
-          style={styles.input}
-          placeholder="Purchased From"
-          value={purchasedFrom}
-          onChangeText={setPurchasedFrom}
-        />
+        <View style={styles.formField}>
+          <Text style={styles.label}>Purchased From</Text>
+          <TextInput
+            style={styles.input}
+            value={purchasedFrom}
+            onChangeText={setPurchasedFrom}
+          />
+        </View>
       )}
 
-      <View style={styles.pickerContainer}>
-        <Picker selectedValue={family} onValueChange={setFamily} style={styles.picker}>
-          {PLANT_FAMILIES.map((item, index) => (
-            <Picker.Item key={index} label={item.label} value={item.value} />
-          ))}
-        </Picker>
+      <View style={styles.formField}>
+        <Text style={styles.label}>Plant Family</Text>
+        <TextInput
+          style={styles.input}
+          value={family}
+          onChangeText={setFamily}
+        />
       </View>
 
-      <TextInput style={styles.input} placeholder="Days to Harvest (e.g., 90)" value={daysToHarvest} onChangeText={setDaysToHarvest} keyboardType="numeric" />
+      <View style={styles.formField}>
+        <Text style={styles.label}>Days to Harvest</Text>
+        <TextInput style={styles.input} value={daysToHarvest} onChangeText={setDaysToHarvest} keyboardType="numeric" />
+      </View>
       
-      <Pressable onPress={() => setShowTransplantedDatePicker(true)} style={styles.dateButton}>
-        <Text style={styles.dateButtonText}>Transplanted Date: {transplantedDate.toLocaleDateString()}</Text>
-      </Pressable>
+      <View style={styles.formField}>
+        <Text style={styles.label}>Transplanted Date</Text>
+        <Pressable onPress={() => setShowTransplantedDatePicker(true)} style={styles.dateButton}>
+          <Text style={styles.dateButtonText}>{transplantedDate.toLocaleDateString()}</Text>
+        </Pressable>
+      </View>
       {showTransplantedDatePicker && (
         <DateTimePicker
           value={transplantedDate}
@@ -223,18 +195,24 @@ export default function EditPlantScreen() {
         />
       )}
 
-      <TextInput style={styles.input} placeholder="Expected Harvest Date" value={expectedHarvestDate} editable={false} />
+      <View style={styles.formField}>
+        <Text style={styles.label}>Expected Harvest Date</Text>
+        <TextInput style={styles.input} value={expectedHarvestDate} editable={false} />
+      </View>
       
-      <View style={styles.pickerContainer}>
-        <Picker selectedValue={selectedBed} onValueChange={setSelectedBed} style={styles.picker}>
-          <Picker.Item label="Select a Garden Bed..." value={null} />
-          {gardenBeds.map((bed) => (
-            <Picker.Item key={bed.id} label={bed.name} value={bed.id} />
-          ))}
-        </Picker>
+      <View style={styles.formField}>
+        <Text style={styles.label}>Garden Bed</Text>
+        <TextInput
+          style={styles.input}
+          value={selectedBed}
+          onChangeText={setSelectedBed}
+        />
       </View>
 
-      <TextInput style={[styles.input, styles.textArea]} placeholder="Notes" value={notes} onChangeText={setNotes} multiline />
+      <View style={styles.formField}>
+        <Text style={styles.label}>Notes</Text>
+        <TextInput style={[styles.input, styles.textArea]} value={notes} onChangeText={setNotes} multiline />
+      </View>
       <Button title="Save Changes" onPress={handleUpdate} />
     </ScrollView>
   );
@@ -243,12 +221,11 @@ export default function EditPlantScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   contentContainer: { padding: 20, paddingBottom: 40 },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, marginBottom: 20, borderRadius: 5 },
+  formField: { marginBottom: 20 },
+  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 5 },
   textArea: { height: 100, textAlignVertical: 'top' },
-  pickerContainer: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, marginBottom: 20 },
-  picker: { height: 50, width: '100%' },
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, justifyContent: 'space-between' },
-  label: { fontSize: 16, marginRight: 10 },
-  dateButton: { borderWidth: 1, borderColor: '#ccc', padding: 12, marginBottom: 20, borderRadius: 5, alignItems: 'center' },
+  label: { fontSize: 16, marginRight: 10, marginBottom: 5 },
+  dateButton: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 5, alignItems: 'center' },
   dateButtonText: { fontSize: 16 },
 });

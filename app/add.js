@@ -1,22 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, Button, StyleSheet, Alert, ScrollView, Switch, Text } from 'react-native';
 import { useRouter } from 'expo-router';
-import { createPlant, getGardenBeds } from '../src/services/api';
-import { Picker } from '@react-native-picker/picker';
+import { createPlant } from '../src/services/api';
+import DatePickerInput from '../components/ui/DatePickerInput';
+import CustomDropdown from '../components/ui/CustomDropdown';
 
-const PLANT_FAMILIES = [
-  { label: "Select Plant Family...", value: null },
-  { label: "Solanaceae (Tomatoes, Eggplants, Peppers, Potatoes)", value: "Solanaceae" },
-  { label: "Cucurbitaceae (Cucumbers, Squashes, Melons)", value: "Cucurbitaceae" },
-  { label: "Brassicaceae (Broccoli, Cabbage, Kale, Radishes)", value: "Brassicaceae" },
-  { label: "Fabaceae (Beans, Peas, Lentils)", value: "Fabaceae" },
-  { label: "Apiaceae (Carrots, Celery, Parsley)", value: "Apiaceae" },
-  { label: "Asteraceae (Lettuce, Sunflowers, Artichokes)", value: "Asteraceae" },
-  { label: "Liliaceae (Onions, Garlic, Leeks)", value: "Liliaceae" },
-  { label: "Poaceae (Corn, Wheat, Rice)", value: "Poaceae" },
-  { label: "Rosaceae (Apples, Pears, Strawberries, Roses)", value: "Rosaceae" },
-  { label: "Other", value: "Other" },
-];
+
 
 const calculateExpectedHarvestDate = (transplantedDate, daysToHarvest) => {
   if (transplantedDate && daysToHarvest) {
@@ -37,14 +26,13 @@ export default function AddPlantScreen() {
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [plantedFromSeed, setPlantedFromSeed] = useState(false); // true for seed, false for seedling
-  const [seedPurchasedFrom, setSeedPurchasedFrom] = useState('');
-  const [family, setFamily] = useState(null); // Changed to null for Picker
+  const [seedPurchasedFrom, setSeedPurchasedFrom] = useState(null);
+  const [family, setFamily] = useState(null);
   const [daysToHarvest, setDaysToHarvest] = useState('');
-  const [plantedDate, setPlantedDate] = useState(''); // This is "Seed Planted Date"
-  const [transplantedDate, setTransplantedDate] = useState('');
+  const [plantedDate, setPlantedDate] = useState(null);
+  const [transplantedDate, setTransplantedDate] = useState(null);
   const [expectedHarvestDate, setExpectedHarvestDate] = useState('');
 
-  const [gardenBeds, setGardenBeds] = useState([]);
   const [selectedBed, setSelectedBed] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
@@ -82,8 +70,8 @@ export default function AddPlantScreen() {
         seed_purchased_from: plantedFromSeed ? seedPurchasedFrom : null, // Only save if planted from seed
         family,
         days_to_harvest: daysToHarvest ? parseInt(daysToHarvest) : null,
-        planted_date: plantedFromSeed ? plantedDate || null : null, // Only save if planted from seed
-        transplanted_date: transplantedDate || null,
+        planted_date: plantedFromSeed ? (plantedDate ? plantedDate.toISOString().split('T')[0] : null) : null, // Format date for Supabase
+        transplanted_date: transplantedDate ? transplantedDate.toISOString().split('T')[0] : null, // Format date for Supabase
         expected_harvest_date: expectedHarvestDate || null,
       };
       await createPlant(plantData);
@@ -99,9 +87,10 @@ export default function AddPlantScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <Text style={styles.inputLabel}>Plant Name</Text>
       <TextInput
         style={styles.input}
-        placeholder="Plant Name (e.g., Cherry Tomato)"
+        placeholder="e.g., Cherry Tomato"
         value={name}
         onChangeText={setName}
       />
@@ -116,61 +105,65 @@ export default function AddPlantScreen() {
 
       {plantedFromSeed && (
         <>
-          <TextInput
-            style={styles.input}
-            placeholder="Seed Purchased From"
-            value={seedPurchasedFrom}
-            onChangeText={setSeedPurchasedFrom}
+          <Text style={styles.inputLabel}>Seed Company</Text>
+          <CustomDropdown
+            tableName="seed_companies"
+            valueColumn="id"
+            labelColumn="name"
+            onSelect={setSeedPurchasedFrom}
+            selectedValue={seedPurchasedFrom}
+            placeholder="Select Seed Company..."
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Seed Planted Date (YYYY-MM-DD)"
+          <Text style={styles.inputLabel}>Seed Planted Date</Text>
+          <DatePickerInput
             value={plantedDate}
-            onChangeText={setPlantedDate}
+            onValueChange={setPlantedDate}
+            placeholder="Select Date"
           />
         </>
       )}
 
-      <Picker
+      <Text style={styles.inputLabel}>Plant Family</Text>
+      <CustomDropdown
+        tableName="plant_families"
+        valueColumn="id"
+        labelColumn="name"
+        onSelect={setFamily}
         selectedValue={family}
-        onValueChange={(itemValue) => setFamily(itemValue)}
-        style={styles.picker}
-      >
-        {PLANT_FAMILIES.map((item, index) => (
-          <Picker.Item key={index} label={item.label} value={item.value} />
-        ))}
-      </Picker>
+        placeholder="Select Plant Family..."
+      />
 
+      <Text style={styles.inputLabel}>Days to Harvest</Text>
       <TextInput
         style={styles.input}
-        placeholder="Days to Harvest (e.g., 90)"
+        placeholder="e.g., 90"
         value={daysToHarvest}
         onChangeText={setDaysToHarvest}
         keyboardType="numeric"
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Transplanted Date (YYYY-MM-DD)"
+      <Text style={styles.inputLabel}>Transplanted Date</Text>
+      <DatePickerInput
         value={transplantedDate}
-        onChangeText={setTransplantedDate}
+        onValueChange={setTransplantedDate}
+        placeholder="Select Date"
       />
+      <Text style={styles.inputLabel}>Expected Harvest Date</Text>
       <TextInput
         style={styles.input}
-        placeholder="Expected Harvest Date (YYYY-MM-DD)"
+        placeholder="YYYY-MM-DD"
         value={expectedHarvestDate}
         editable={false} // This field is calculated
         onChangeText={setExpectedHarvestDate} // Still need onChangeText for consistency, but it won't be user-editable
       />
-      <Picker
+      <Text style={styles.inputLabel}>Garden Bed</Text>
+      <CustomDropdown
+        tableName="garden_beds"
+        valueColumn="id"
+        labelColumn="name"
+        onSelect={setSelectedBed}
         selectedValue={selectedBed}
-        onValueChange={(itemValue) => setSelectedBed(itemValue)}
-        style={styles.picker}
-      >
-        <Picker.Item label="Select a Garden Bed..." value={null} />
-        {gardenBeds.map((bed) => (
-          <Picker.Item key={bed.id} label={bed.name} value={bed.id} />
-        ))}
-      </Picker>
+        placeholder="Select a Garden Bed..."
+      />
       <TextInput
         style={[styles.input, styles.textArea]}
         placeholder="Notes"
@@ -188,7 +181,6 @@ const styles = StyleSheet.create({
   contentContainer: { padding: 20, paddingBottom: 40 }, // Added paddingBottom
   input: { borderWidth: 1, borderColor: '#ccc', padding: 12, marginBottom: 20, borderRadius: 5 },
   textArea: { height: 100, textAlignVertical: 'top' },
-  picker: { borderWidth: 1, borderColor: '#ccc', marginBottom: 20, borderRadius: 5 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
