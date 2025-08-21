@@ -18,6 +18,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="garden-beds"
                 options={{
+          tabBarLabel: 'Garden Beds',
           tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
         }}
       />

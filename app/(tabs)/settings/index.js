@@ -43,9 +43,9 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+    <SafeAreaView style={{ flex: 1, paddingTop: 20, paddingHorizontal: 20 }}>
       <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 20 }}>Settings</Text>
-      <View style={{ width: '100%' }}>
+      <View style={{ width: '80%', alignSelf: 'center' }}>
         <TextInput
           style={{ borderWidth: 1, borderColor: 'gray', padding: 10, marginBottom: 10, borderRadius: 5 }}
           placeholder="Username"
@@ -54,7 +54,7 @@ export default function SettingsScreen() {
         />
         <Button title={loading ? 'Updating...' : 'Update Username'} onPress={handleUpdateUsername} disabled={loading} />
       </View>
-      <View style={{ marginTop: 40, width: '100%' }}>
+      <View style={{ marginTop: 40, width: '80%', alignSelf: 'center' }}>
         <Button title="Sign Out" onPress={signOut} color="red" />
       </View>
     </SafeAreaView>
