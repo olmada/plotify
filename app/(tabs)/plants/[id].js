@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 64, // Increased padding
+    paddingBottom: 100, // Increased padding
     paddingHorizontal: 16,
   },
   loadingContainer: {
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 12,
     paddingVertical: 12,
-    marginTop: -24, // Pull stats up over the image
+    marginTop: 24, // Adjusted to push stats down
     marginHorizontal: 8,
     elevation: 5,
     shadowColor: '#000',
