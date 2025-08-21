@@ -5,28 +5,25 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="plants"
         options={{
-          title: 'My Plants',
           tabBarLabel: 'Plants',
           tabBarIcon: ({ color, size }) => <Ionicons name="leaf-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="garden-beds"
-        options={{
-          title: 'Garden Beds',
+                options={{
           tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="tasks"
         options={{
-          title: 'Tasks',
           tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" size={size} color={color} />,
         }}
       />

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, SafeAreaView } from 'react-native';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { getGardenBeds } from '../../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,10 +42,8 @@ export default function GardenBedListScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Garden Beds</Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      
       <FlatList
         data={gardenBeds}
         renderItem={renderItem}
@@ -56,7 +54,7 @@ export default function GardenBedListScreen() {
       <Pressable style={styles.fab} onPress={() => router.push('/add-garden-bed')}>
         <Ionicons name="add" size={32} color="white" />
       </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -65,16 +63,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  header: {
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
+  
+  
   gardenBedItem: {
     padding: 20,
     marginBottom: 16,

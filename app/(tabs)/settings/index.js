@@ -1,4 +1,4 @@
-import { View, Text, Button, TextInput, Alert } from 'react-native';
+import { View, Text, Button, TextInput, Alert, SafeAreaView } from 'react-native';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../src/services/supabase';
 import { useAuth } from '../../../src/context/AuthContext';
@@ -43,7 +43,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+    <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 20 }}>Settings</Text>
       <View style={{ width: '100%' }}>
         <TextInput
@@ -57,6 +57,6 @@ export default function SettingsScreen() {
       <View style={{ marginTop: 40, width: '100%' }}>
         <Button title="Sign Out" onPress={signOut} color="red" />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

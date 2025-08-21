@@ -7,8 +7,8 @@ export default function PlantsStackLayout() {
         // The header is shown by default in a stack navigator
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'My Plants' }} />
-      <Stack.Screen name="[id]" />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="[id]" options={{ title: '' }} />
     </Stack>
   );
 }

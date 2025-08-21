@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable, Alert, SafeAreaView } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { getAllTasks, updateTask, createTask } from '../../../src/services/api';
 import { RRule } from 'rrule';
@@ -116,10 +116,8 @@ export default function AllTasksScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Tasks</Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      
       <View style={styles.filterContainer}>
         <Pressable style={[styles.filterButton, filter === 'incomplete' && styles.activeFilter]} onPress={() => setFilter('incomplete')}> 
           <Text style={styles.filterButtonText}>Incomplete</Text>
@@ -141,13 +139,13 @@ export default function AllTasksScreen() {
       <Pressable style={styles.fab} onPress={() => router.push('/add-task')}>
         <Ionicons name="add" size={32} color="white" />
       </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
-  header: { padding: 20, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  
   title: { fontSize: 24, fontWeight: 'bold' },
   filterContainer: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10 },
   filterButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#eee' },

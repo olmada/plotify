@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Pressable, Text } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Pressable, Text, SafeAreaView } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { getPlants, getAllTasks } from '../../../src/services/api';
 import { useAuth } from '../../../src/context/AuthContext';
@@ -39,7 +39,7 @@ export default function PlantListScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <HomeScreenHeader
         userName={userName}
         plantsCount={plants.length}
@@ -49,7 +49,7 @@ export default function PlantListScreen() {
       <Pressable style={styles.fab} onPress={() => router.push('/add')}>
         <Text style={styles.fabText}>+</Text>
       </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }
 
