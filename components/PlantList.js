@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlatList, Text, StyleSheet, Pressable, View } from 'react-native';
 import { Link } from 'expo-router';
-import Card from './ui/Card';
+import { Card } from './ui/Card';
 
 const PlantList = ({ plants }) => {
   const renderItem = ({ item }) => (

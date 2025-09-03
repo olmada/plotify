@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import NewTabBar from '../../components/ui/NewTabBar';
 
 export default function TabsLayout() {
   return (
@@ -7,32 +7,36 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
       }}
+      tabBar={(props) => <NewTabBar {...props} />}
     >
       <Tabs.Screen
-        name="plants"
+        name="journal"
         options={{
-          tabBarLabel: 'Plants',
-          tabBarIcon: ({ color, size }) => <Ionicons name="leaf-outline" size={size} color={color} />,
+          title: 'Journal',
         }}
       />
       <Tabs.Screen
-        name="garden-beds"
-                options={{
-          tabBarLabel: 'Garden Beds',
-          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
+        name="plants"
+        options={{
+          title: 'Plants',
+        }}
+      />
+      <Tabs.Screen
+        name="add"
+        options={{
+          title: 'Add',
+        }}
+      />
+      <Tabs.Screen
+        name="beds"
+        options={{
+          title: 'Beds',
         }}
       />
       <Tabs.Screen
         name="tasks"
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings/index"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => <Ionicons name="cog-outline" size={size} color={color} />,
+            title: 'Tasks',
         }}
       />
     </Tabs>

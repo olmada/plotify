@@ -3,46 +3,61 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
-const primaryGreenLight = '#1A4314'; // Dark green for light theme
-const accentGreenLight = '#4CAF50'; // Lighter green for light theme
-const primaryGreenDark = '#4CAF50'; // Lighter green for dark theme (as primary)
-const accentGreenDark = '#8BC34A'; // Even lighter green for dark theme (as accent)
-
-const lightGray = '#F5F5F5';
-const mediumGray = '#CCCCCC';
-const darkGray = '#666666';
-
 export const Colors = {
   light: {
-    text: '#11181C', // Keep dark text for light background
-    background: '#FFFFFF', // Pure white background
-    tint: primaryGreenLight, // Use primary green as tint
-    icon: darkGray, // Darker icon for light theme
-    tabIconDefault: darkGray,
-    tabIconSelected: primaryGreenLight,
-    primaryGreen: primaryGreenLight,
-    accentGreen: accentGreenLight,
-    lightGray: lightGray,
-    mediumGray: mediumGray,
-    darkGray: darkGray,
-    cardBackground: '#FFFFFF', // White cards on light background
-    cardBorder: '#E0E0E0', // Light border for cards
-    shadowColor: '#000000', // Black shadow for light theme
+    text: '#1d1d1f',
+    background: '#f8f9fa',
+    tint: '#2e7d32',
+    icon: '#1d1d1f',
+    tabIconDefault: '#8e8e93',
+    tabIconSelected: '#2e7d32',
+    primary: '#2e7d32',
+    primaryForeground: '#fff',
+    secondary: '#8d6e63',
+    secondaryForeground: '#fff',
+    muted: '#f2f2f7',
+    mutedForeground: '#8e8e93',
+    accent: '#e8f5e8',
+    accentForeground: '#2e7d32',
+    destructive: '#ff3b30',
+    destructiveForeground: '#fff',
+    border: '#0000001f',
+    input: 'transparent',
+    inputBackground: '#f2f2f7',
+    switchBackground: '#e9ecef',
+    ring: '#2e7d32',
+    card: '#fff',
+    cardForeground: '#1d1d1f',
+    popover: '#fff',
+    popoverForeground: '#1d1d1f',
+    shadowColor: '#000',
   },
   dark: {
-    text: '#ECEDEE', // Keep light text for dark background
-    background: '#1A1A1A', // Darker background
-    tint: primaryGreenDark, // Use primary green as tint
-    icon: mediumGray, // Lighter icon for dark theme
-    tabIconDefault: mediumGray,
-    tabIconSelected: primaryGreenDark,
-    primaryGreen: primaryGreenDark,
-    accentGreen: accentGreenDark,
-    lightGray: '#333333', // Darker light gray for dark theme
-    mediumGray: '#555555', // Darker medium gray for dark theme
-    darkGray: '#AAAAAA', // Lighter dark gray for dark theme
-    cardBackground: '#2A2A2A', // Slightly lighter cards on dark background
-    cardBorder: '#3A3A3A', // Darker border for cards
-    shadowColor: '#FFFFFF', // White shadow for dark theme
+    text: '#fff',
+    background: '#000',
+    tint: '#30d158',
+    icon: '#fff',
+    tabIconDefault: '#8e8e93',
+    tabIconSelected: '#30d158',
+    primary: '#30d158',
+    primaryForeground: '#000',
+    secondary: '#a0845c',
+    secondaryForeground: '#fff',
+    muted: '#2c2c2e',
+    mutedForeground: '#8e8e93',
+    accent: '#1a3d1c',
+    accentForeground: '#30d158',
+    destructive: '#ff453a',
+    destructiveForeground: '#fff',
+    border: '#ffffff1f',
+    input: '#2c2c2e',
+    inputBackground: '#2c2c2e', // Assuming same as input
+    switchBackground: '#2c2c2e', // Assuming same as input
+    ring: '#30d158',
+    card: '#1c1c1e',
+    cardForeground: '#fff',
+    popover: '#1c1c1e',
+    popoverForeground: '#fff',
+    shadowColor: '#fff',
   },
 };

@@ -1,29 +1,35 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { useColorScheme } from '../../hooks/useColorScheme';
+import { Colors } from '../../constants/Colors';
 
-type CardProps = {
-  children: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
-};
+export function Card({ children, style }) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
 
-const Card = ({ children, style }: CardProps) => (
-  <View style={[styles.card, style]}>
-    {children}
-  </View>
-);
+  return (
+    <View style={[
+      styles.card,
+      {
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        shadowColor: colors.shadowColor,
+      },
+      style
+    ]}>
+      {children}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderWidth: 1,
+    borderRadius: 12, // Corresponds to --radius: .75rem; with 16px base -> 12px
     padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 3,
   },
 });
-
-export default Card;
