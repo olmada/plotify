@@ -1,11 +1,9 @@
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { Text, View } from 'react-native';
 
 export default function AddScreen() {
-  // This screen will likely open a modal or navigate to an add screen.
   return (
-    <ThemedView>
-      <ThemedText>Add Screen</ThemedText>
-    </ThemedView>
+    <View>
+      <Text>Add Screen</Text>
+    </View>
   );
 }

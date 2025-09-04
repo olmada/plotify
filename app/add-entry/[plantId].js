@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert, Image } from 'react-native';
+import { View, StyleSheet, Alert, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { createJournal, uploadPhoto } from '../../src/services/api';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 
 export default function AddEntryScreen() {
   const { plantId } = useLocalSearchParams();
@@ -57,27 +59,28 @@ export default function AddEntryScreen() {
 
   return (
     <View style={styles.container}>
-      <TextInput
-        style={styles.input}
+      <Input
         placeholder="What's new with your plant today?"
         value={comment}
         onChangeText={setComment}
         multiline
+        style={{ height: 150, textAlignVertical: 'top' }}
       />
       
       <View style={styles.imagePickerContainer}>
-        <Button title="Add a Photo" onPress={pickImage} />
+        <Button variant="secondary" onPress={pickImage}>Add a Photo</Button>
         {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
       </View>
       
-      <Button title={isSaving ? "Saving..." : "Save Entry"} onPress={handleSave} disabled={isSaving} />
+      <Button onPress={handleSave} disabled={isSaving}>
+        {isSaving ? "Saving..." : "Save Entry"}
+      </Button>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 5, width: '100%', height: 150, textAlignVertical: 'top', marginBottom: 20 },
-  imagePickerContainer: { alignItems: 'center', marginBottom: 20 },
+  container: { flex: 1, padding: 20 },
+  imagePickerContainer: { alignItems: 'center', marginVertical: 20 },
   image: { width: 200, height: 200, resizeMode: 'contain', marginTop: 20, borderRadius: 8 },
 });

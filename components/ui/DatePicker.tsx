@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { Platform, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { Platform, Text, StyleSheet, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useColorScheme } from '../../hooks/useColorScheme';
+import { Colors } from '../../constants/Colors';
+import { Button } from './Button';
 
-const DatePickerInput = ({ value, onValueChange, placeholder }) => {
+const DatePicker = ({ value, onValueChange, placeholder }) => {
   const [show, setShow] = useState(false);
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
 
   const onChange = (event, selectedDate) => {
     const currentDate = selectedDate || value;
-    setShow(Platform.OS === 'ios'); // On iOS, the picker is a modal, so we hide it after selection
+    setShow(Platform.OS === 'ios');
     onValueChange(currentDate);
   };
 
@@ -17,17 +22,28 @@ const DatePickerInput = ({ value, onValueChange, placeholder }) => {
 
   const formattedDate = value ? new Date(value).toISOString().split('T')[0] : '';
 
+  const styles = StyleSheet.create({
+    dateText: {
+      fontSize: 14,
+      color: colors.text,
+    },
+    placeholderText: {
+      fontSize: 14,
+      color: colors.mutedForeground,
+    },
+  });
+
   return (
     <View>
-      <TouchableOpacity onPress={showMode} style={styles.input}>
+      <Button variant="outline" onPress={showMode}>
         <Text style={value ? styles.dateText : styles.placeholderText}>
           {formattedDate || placeholder}
         </Text>
-      </TouchableOpacity>
+      </Button>
       {show && (
         <DateTimePicker
           testID="dateTimePicker"
-          value={value || new Date()} // Use current date if no value is set
+          value={value || new Date()}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={onChange}
@@ -37,23 +53,4 @@ const DatePickerInput = ({ value, onValueChange, placeholder }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 12,
-    marginBottom: 20,
-    borderRadius: 5,
-    justifyContent: 'center',
-  },
-  dateText: {
-    fontSize: 14,
-    color: '#000',
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: '#999',
-  },
-});
-
-export default DatePickerInput;
+export { DatePicker };

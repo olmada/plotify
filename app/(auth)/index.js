@@ -1,7 +1,8 @@
-// File: mobile/app/(auth)/index.js
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { supabase } from '../../src/services/supabase';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 
 export default function AuthScreen() {
   const [email, setEmail] = useState('');
@@ -20,29 +21,28 @@ export default function AuthScreen() {
 
   return (
     <View style={styles.container}>
-      <TextInput
-        style={styles.input}
+      <Input
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
       />
-      <TextInput
-        style={styles.input}
+      <View style={styles.spacer} />
+      <Input
         placeholder="Password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
-      <Button title="Sign In" onPress={handleSignIn} />
       <View style={styles.spacer} />
-      <Button title="Sign Up" onPress={handleSignUp} />
+      <Button onPress={handleSignIn}>Sign In</Button>
+      <View style={styles.spacer} />
+      <Button variant="secondary" onPress={handleSignUp}>Sign Up</Button>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 16 },
-  input: { borderWidth: 1, padding: 12, marginBottom: 12, borderRadius: 5 },
-  spacer: { height: 10 }
+  spacer: { height: 12 }
 });

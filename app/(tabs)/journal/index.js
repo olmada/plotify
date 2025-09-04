@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { ScrollView, View, Text, StyleSheet, Image } from 'react-native';
 import { useColorScheme } from '../../../hooks/useColorScheme';
 import { Colors } from '../../../constants/Colors';
-import { ThemedView } from '../../../components/ThemedView';
-import { ThemedText } from '../../../components/ThemedText';
-import { Card } from '../../../components/ui/Card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
-import { Settings, Calendar, Camera, CheckCircle, Sprout, Droplets, Scissors } from 'lucide-react-native';
+import { Settings, Calendar, Camera, CheckCircle, Sprout, Droplets } from 'lucide-react-native';
 
 export default function JournalScreen() {
   const colorScheme = useColorScheme();
@@ -59,15 +57,15 @@ export default function JournalScreen() {
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }}>
-      <ThemedView style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View>
-          <ThemedText style={styles.headerTitle}>Garden Journal</ThemedText>
-          <ThemedText style={{ color: colors.mutedForeground }}>Your growing timeline</ThemedText>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Garden Journal</Text>
+          <Text style={{ color: colors.mutedForeground }}>Your growing timeline</Text>
         </View>
-        <Button variant="ghost" size="sm" style={{ width: 40, height: 40, borderRadius: 20 }}>
+        <Button variant="ghost" size="icon">
           <Settings color={colors.mutedForeground} size={20} />
         </Button>
-      </ThemedView>
+      </View>
 
       <View style={styles.filterContainer}>
         {['all', 'plants', 'beds', 'tasks'].map((tab) => (
@@ -88,38 +86,42 @@ export default function JournalScreen() {
           return (
             <View key={entry.id} style={styles.timelineItem}>
               <Card>
-                <View style={{ flexDirection: 'row', gap: 16 }}>
-                  <View style={[styles.iconContainer, { backgroundColor: colors.accent }]}>
-                    <IconComponent color={colors.accentForeground} size={16} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <View>
-                        <ThemedText style={{ fontWeight: '500' }}>{entry.title}</ThemedText>
-                        <ThemedText style={{ color: colors.mutedForeground, fontSize: 14 }}>{entry.description}</ThemedText>
-                      </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <ThemedText style={{ fontSize: 12, color: colors.mutedForeground }}>{entry.date}</ThemedText>
-                        <ThemedText style={{ fontSize: 12, color: colors.mutedForeground }}>{entry.time}</ThemedText>
+                <CardHeader>
+                  <View style={{ flexDirection: 'row', gap: 16 }}>
+                    <View style={[styles.iconContainer, { backgroundColor: colors.accent }]}>
+                      <IconComponent color={colors.accentForeground} size={16} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <View>
+                          <CardTitle>{entry.title}</CardTitle>
+                          <CardDescription>{entry.description}</CardDescription>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{entry.date}</Text>
+                          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{entry.time}</Text>
+                        </View>
                       </View>
                     </View>
-                    {entry.image && (
-                      <Image source={{ uri: entry.image }} style={styles.image} />
+                  </View>
+                </CardHeader>
+                <CardContent>
+                  {entry.image && (
+                    <Image source={{ uri: entry.image }} style={styles.image} />
+                  )}
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    {entry.plant && (
+                      <Badge variant="outline">
+                        🌱 {entry.plant}
+                      </Badge>
                     )}
-                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                      {entry.plant && (
-                        <Badge variant="outline">
-                          🌱 {entry.plant}
-                        </Badge>
-                      )}
-                      {entry.bed && (
-                        <Badge variant="outline">
-                          📍 {entry.bed}
-                        </Badge>
-                      )}
-                    </View>
+                    {entry.bed && (
+                      <Badge variant="outline">
+                        📍 {entry.bed}
+                      </Badge>
+                    )}
                   </View>
-                </View>
+                </CardContent>
               </Card>
             </View>
           );

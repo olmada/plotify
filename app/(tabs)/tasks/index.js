@@ -3,14 +3,12 @@ import { View, Text, ScrollView, ActivityIndicator, Alert, StyleSheet } from 're
 import { useFocusEffect, useRouter } from 'expo-router';
 import { getAllTasks, updateTask, createTask } from '../../../src/services/api';
 import { RRule } from 'rrule';
-import { ThemedView } from '../../../components/ThemedView';
-import { ThemedText } from '../../../components/ThemedText';
-import { Card } from '../../../components/ui/Card';
+import { Card, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { useColorScheme } from '../../../hooks/useColorScheme';
 import { Colors } from '../../../constants/Colors';
-import { Check, Circle, Settings, Calendar, Clock } from 'lucide-react-native';
+import { Check, Circle, Settings, Calendar } from 'lucide-react-native';
 
 export default function AllTasksScreen() {
   const [tasks, setTasks] = useState([]);
@@ -63,8 +61,8 @@ export default function AllTasksScreen() {
         const updatedTask = await updateTask(task.id, { completed: true });
         setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
       }
-    } catch (error) {
-      console.error("Error updating recurring task:", error);
+    } catch (_error) {
+      console.error("Error updating recurring task:", _error);
       Alert.alert("Error", "Could not update recurring task.");
     }
   };
@@ -73,7 +71,7 @@ export default function AllTasksScreen() {
     try {
       const updatedTask = await updateTask(task.id, { completed: !task.completed });
       setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
-    } catch (error) {
+    } catch (_error) {
       Alert.alert("Error", "Could not update the task.");
     }
   };
@@ -111,39 +109,41 @@ export default function AllTasksScreen() {
 
   const renderTask = (task) => (
     <Card key={task.id} style={{ marginBottom: 16 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <Button variant="ghost" size="icon" onPress={() => handleToggleTask(task)}>
-          {task.completed ? <Check color={colors.primary} /> : <Circle color={colors.mutedForeground} />}
-        </Button>
-        <View style={{ flex: 1 }}>
-          <ThemedText style={{ fontWeight: '500', textDecorationLine: task.completed ? 'line-through' : 'none', color: task.completed ? colors.mutedForeground : colors.foreground }}>
-            {task.title}
-          </ThemedText>
-          <ThemedText style={{ fontSize: 14, color: colors.mutedForeground }}>
-            {task.plant?.name || task.bed?.name || 'General Task'}
-          </ThemedText>
+      <CardContent>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <Button variant="ghost" size="icon" onPress={() => handleToggleTask(task)}>
+            {task.completed ? <Check color={colors.primary} /> : <Circle color={colors.mutedForeground} />}
+          </Button>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: '500', textDecorationLine: task.completed ? 'line-through' : 'none', color: task.completed ? colors.mutedForeground : colors.text }}>
+              {task.title}
+            </Text>
+            <Text style={{ fontSize: 14, color: colors.mutedForeground }}>
+              {task.plant?.name || task.bed?.name || 'General Task'}
+            </Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Badge variant={new Date(task.due_date) < new Date() && !task.completed ? "destructive" : "outline"}>
+              <Calendar size={12} color={colors.mutedForeground} />
+              <Text style={{ marginLeft: 4, color: colors.mutedForeground }}>{new Date(task.due_date).toLocaleDateString()}</Text>
+            </Badge>
+          </View>
         </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Badge variant={new Date(task.due_date) < new Date() && !task.completed ? "destructive" : "outline"}>
-            <Calendar size={12} color={colors.mutedForeground} />
-            <ThemedText style={{ marginLeft: 4 }}>{new Date(task.due_date).toLocaleDateString()}</ThemedText>
-          </Badge>
-        </View>
-      </View>
+      </CardContent>
     </Card>
   );
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }}>
-      <ThemedView style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View>
-          <ThemedText style={styles.headerTitle}>Tasks</ThemedText>
-          <ThemedText style={{ color: colors.mutedForeground }}>What needs to be done</ThemedText>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Tasks</Text>
+          <Text style={{ color: colors.mutedForeground }}>What needs to be done</Text>
         </View>
-        <Button variant="ghost" size="sm" style={{ width: 40, height: 40, borderRadius: 20 }} onPress={() => router.push('/add-task')}>
+        <Button variant="ghost" size="icon" onPress={() => router.push('/add-task')}>
           <Settings color={colors.mutedForeground} size={20} />
         </Button>
-      </ThemedView>
+      </View>
 
       <View style={styles.filterContainer}>
         <Button variant={filter === 'incomplete' ? 'default' : 'outline'} size="sm" onPress={() => setFilter('incomplete')}>
@@ -164,9 +164,9 @@ export default function AllTasksScreen() {
           {filteredTasks.length > 0 ? (
             filteredTasks.map(renderTask)
           ) : (
-            <ThemedText style={{ textAlign: 'center', color: colors.mutedForeground, marginTop: 40 }}>
+            <Text style={{ textAlign: 'center', color: colors.mutedForeground, marginTop: 40 }}>
               No tasks in this category.
-            </ThemedText>
+            </Text>
           )}
         </View>
       )}

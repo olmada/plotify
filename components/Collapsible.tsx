@@ -1,15 +1,14 @@
 import { PropsWithChildren, useState, useRef, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View, Animated } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Animated, Text } from 'react-native';
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { IconSymbol } from './ui/IconSymbol';
+import { Colors } from '../constants/Colors';
+import { useColorScheme } from '../hooks/useColorScheme';
 
 export function Collapsible({ children, title, headerRight }: PropsWithChildren & { title: string, headerRight?: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(true);
   const theme = useColorScheme() ?? 'light';
+  const colors = Colors[theme];
   const rotation = useRef(new Animated.Value(isOpen ? 1 : 0)).current;
 
   useEffect(() => {
@@ -18,15 +17,45 @@ export function Collapsible({ children, title, headerRight }: PropsWithChildren 
       duration: 200,
       useNativeDriver: true,
     }).start();
-  }, [isOpen]);
+  }, [isOpen, rotation]);
 
   const rotate = rotation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '90deg'],
   });
 
+  const styles = StyleSheet.create({
+    cardContainer: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    heading: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 6,
+    },
+    headingLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    titleText: {
+      fontSize: 22,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    content: {
+      marginTop: 12,
+    },
+  });
+
   return (
-    <ThemedView style={styles.cardContainer}>
+    <View style={styles.cardContainer}>
       <TouchableOpacity
         style={styles.heading}
         onPress={() => setIsOpen((value) => !value)}
@@ -37,44 +66,14 @@ export function Collapsible({ children, title, headerRight }: PropsWithChildren 
               name="chevron.right"
               size={18}
               weight="medium"
-              color={Colors.light.icon}
+              color={colors.icon}
             />
           </Animated.View>
-          <ThemedText type="defaultSemiBold" style={styles.titleText}>{title}</ThemedText>
+          <Text style={styles.titleText}>{title}</Text>
         </View>
         {headerRight}
       </TouchableOpacity>
-      {isOpen && <ThemedView style={styles.content}>{children}</ThemedView>}
-    </ThemedView>
+      {isOpen && <View style={styles.content}>{children}</View>}
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  cardContainer: {
-    backgroundColor: '#FFFFFF', // White background for the collapsible card
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-  },
-  heading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
-  },
-  headingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  titleText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333333', // Dark text for the title
-  },
-  content: {
-    marginTop: 12,
-  },
-});

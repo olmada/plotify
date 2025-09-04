@@ -1,35 +1,37 @@
-import { useLocalSearchParams, useNavigation, Link, useFocusEffect, useRouter } from 'expo-router';
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, Image, ScrollView, Pressable, SafeAreaView, ImageBackground } from 'react-native';
+import { useLocalSearchParams, Link, useFocusEffect, useRouter } from 'expo-router';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Alert, Image, ScrollView, Pressable, SafeAreaView, ImageBackground } from 'react-native';
 import { getPlantById, deletePlant, getPlantTimeline, getTasksForPlant, updateTask, deleteTask } from '../../../src/services/api';
 import { RRule } from 'rrule';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Collapsible } from '../../../components/Collapsible';
-import Card from '../../../components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
+import { Button } from '../../../components/ui/Button';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Theme } from '../../../constants/Theme';
+import { useColorScheme } from '../../../hooks/useColorScheme';
+import { Colors } from '../../../constants/Colors';
 
 // --- Helper Components ---
 
-import { useThemeColor } from '../../../hooks/useThemeColor';
-
 const StatItem = ({ icon, label, value }) => {
-  const iconColor = useThemeColor({}, 'primary');
-  const labelColor = useThemeColor({}, 'mutedForeground');
-  const valueColor = useThemeColor({}, 'text');
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
 
   return (
     <View style={styles.statItem}>
-      <MaterialCommunityIcons name={icon} size={24} color={iconColor} />
-      <Text style={[styles.statLabel, { color: labelColor }]}>{label}</Text>
-      <Text style={[styles.statValue, { color: valueColor }]}>{value}</Text>
+      <MaterialCommunityIcons name={icon} size={24} color={colors.primary} />
+      <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
+      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
     </View>
   );
 };
 
 const TaskList = ({ tasks, onToggleTask, onDeleteTask }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
+
   if (tasks.length === 0) {
-    return <Text style={styles.emptyText}>No tasks here. Well done!</Text>;
+    return <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No tasks here. Well done!</Text>;
   }
 
   return tasks.map((task) => {
@@ -37,18 +39,18 @@ const TaskList = ({ tasks, onToggleTask, onDeleteTask }) => {
     return (
       <Card key={task.id} style={styles.taskCard}>
         <View style={styles.taskContainer}>
-            <Pressable onPress={() => onToggleTask(task)} style={styles.taskCheckbox}>
-              {task.completed && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+            <Pressable onPress={() => onToggleTask(task)} style={[styles.taskCheckbox, { borderColor: colors.primary, backgroundColor: task.completed ? colors.primary : 'transparent' }]}>
+              {task.completed && <Ionicons name="checkmark" size={18} color={colors.primaryForeground} />}
             </Pressable>
             <View style={styles.taskTextContainer}>
-              <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>{task.title}</Text>
-              <Text style={[styles.taskDueDate, isOverdue && styles.taskDueDateOverdue]}>
+              <Text style={[styles.taskTitle, task.completed && { textDecorationLine: 'line-through', color: colors.mutedForeground }, { color: colors.text }]}>{task.title}</Text>
+              <Text style={[styles.taskDueDate, isOverdue && { color: colors.destructive }, { color: colors.mutedForeground }]}>
                 Due: {new Date(task.due_date).toLocaleDateString()}
               </Text>
             </View>
-            <Pressable onPress={() => onDeleteTask(task.id)} style={styles.deleteButton}>
-              <Ionicons name="trash-outline" size={22} color="#888" />
-            </Pressable>
+            <Button variant="ghost" size="icon" onPress={() => onDeleteTask(task.id)}>
+              <Ionicons name="trash-outline" size={22} color={colors.mutedForeground} />
+            </Button>
         </View>
       </Card>
     );
@@ -56,49 +58,56 @@ const TaskList = ({ tasks, onToggleTask, onDeleteTask }) => {
 };
 
 const TimelineItem = ({ item }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
   const hasText = item.data.text && item.data.text.trim().length > 0;
   const hasPhoto = item.data.photo_url || item.data.url;
 
   return (
-    <Card style={{ padding: 0, overflow: 'hidden' }}>
+    <Card style={{ padding: 0, overflow: 'hidden', marginBottom: 12 }}>
       {hasPhoto && (
         <Image source={{ uri: item.data.photo_url || item.data.url }} style={styles.timelinePhoto} />
       )}
       <View style={styles.timelineContent}>
-        <Text style={styles.timelineDate}>{new Date(item.timestamp).toLocaleString()}</Text>
-        {hasText && <Text style={styles.timelineText}>{item.data.text}</Text>}
+        <Text style={[styles.timelineDate, { color: colors.mutedForeground }]}>{new Date(item.timestamp).toLocaleString()}</Text>
+        {hasText && <Text style={[styles.timelineText, { color: colors.text }]}>{item.data.text}</Text>}
       </View>
     </Card>
   );
 };
 
-const PlantDetailSkeleton = () => (
-    <SafeAreaView style={styles.safeArea}>
+const PlantDetailSkeleton = () => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        <View style={[styles.heroImage, styles.skeleton]} />
-        <View style={styles.statsContainer}>
-            <View style={styles.skeletonStat} />
-            <View style={styles.skeletonStat} />
-            <View style={styles.skeletonStat} />
+        <View style={[styles.heroImage, styles.skeleton, { backgroundColor: colors.muted }]} />
+        <View style={[styles.statsContainer, { backgroundColor: colors.card }]}>
+            <View style={[styles.skeletonStat, { backgroundColor: colors.border }]} />
+            <View style={[styles.skeletonStat, { backgroundColor: colors.border }]} />
+            <View style={[styles.skeletonStat, { backgroundColor: colors.border }]} />
         </View>
-        <Card style={styles.skeletonCard}>
-            <View style={styles.skeletonText} />
-            <View style={styles.skeletonText} />
+        <Card style={[styles.skeletonCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.skeletonText, { backgroundColor: colors.border }]} />
+            <View style={[styles.skeletonText, { backgroundColor: colors.border }]} />
         </Card>
-        <Card style={styles.skeletonCard}>
-            <View style={styles.skeletonText} />
+        <Card style={[styles.skeletonCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.skeletonText, { backgroundColor: colors.border }]} />
         </Card>
       </ScrollView>
     </SafeAreaView>
-);
+  );
+};
 
 
 // --- Main Screen Component ---
 
 export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams();
-  const navigation = useNavigation();
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
 
   const [plant, setPlant] = useState(null);
   const [timeline, setTimeline] = useState([]);
@@ -117,9 +126,9 @@ export default function PlantDetailScreen() {
       setPlant(plantData);
       setTimeline(timelineData.filter(item => item.type === 'journal' || item.type === 'photo'));
       setTasks(tasksData);
-    } catch (error) {
+    } catch (_error) {
       Alert.alert("Error", "Failed to fetch plant details.");
-      console.error(error);
+      console.error(_error);
     }
  finally {
       setLoading(false);
@@ -142,7 +151,7 @@ export default function PlantDetailScreen() {
             try {
               await deletePlant(id);
               router.replace('/(tabs)/plants/');
-            } catch (error) {
+            } catch (_error) {
               Alert.alert("Error", "Could not delete the plant.");
             }
           },
@@ -178,7 +187,7 @@ export default function PlantDetailScreen() {
   }
 
   if (!plant) {
-    return <View style={styles.container}><Text style={styles.emptyText}>Plant not found.</Text></View>;
+    return <View style={styles.container}><Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Plant not found.</Text></View>;
   }
 
   const allStats = [
@@ -194,7 +203,7 @@ export default function PlantDetailScreen() {
   const displayedStats = statsExpanded ? allStats : allStats.slice(0, 3);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView 
         style={styles.container} 
         contentContainerStyle={styles.contentContainer}
@@ -209,14 +218,14 @@ export default function PlantDetailScreen() {
             style={styles.headerGradient}
           />
           <View style={styles.headerButtons}>
-            <Pressable onPress={() => router.back()} style={styles.headerButton}>
+            <Button variant="ghost" size="icon" onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="white" />
-            </Pressable>
+            </Button>
             <Link href={{ pathname: '/edit-plant/[id]', params: { id: id } }} asChild>
-              <Pressable style={styles.headerEditButton}>
+              <Button variant="ghost" onPress={() => {}}>
                 <MaterialCommunityIcons name="pencil" size={16} color="#FFFFFF" />
                 <Text style={styles.headerEditButtonText}>Edit</Text>
-              </Pressable>
+              </Button>
             </Link>
           </View>
           <LinearGradient
@@ -226,59 +235,64 @@ export default function PlantDetailScreen() {
           <Text style={styles.heroTitle}>{plant.name}</Text>
         </ImageBackground>
 
-        <View style={[styles.statsContainer, statsExpanded && styles.statsContainerExpanded]}>
+        <View style={[styles.statsContainer, statsExpanded && styles.statsContainerExpanded, { backgroundColor: colors.card }]}>
           {displayedStats.map(stat => <StatItem key={stat.label} {...stat} />)}
         </View>
         {allStats.length > 3 && (
-            <Pressable onPress={() => setStatsExpanded(!statsExpanded)} style={styles.showMoreButton}>
-                <Text style={styles.showMoreButtonText}>{statsExpanded ? 'Show Less' : 'Show More'}</Text>
-            </Pressable>
+            <Button variant="ghost" onPress={() => setStatsExpanded(!statsExpanded)}>
+                <Text style={[styles.showMoreButtonText, { color: colors.primary }]}>{statsExpanded ? 'Show Less' : 'Show More'}</Text>
+            </Button>
         )}
 
-        <Collapsible 
-          title="Timeline"
-          containerStyle={{ marginTop: 12 }}
-          headerRight={
+        <Card 
+          style={{ marginTop: 12 }}
+        >
+          <CardHeader>
+            <CardTitle>Timeline</CardTitle>
             <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
-              <Pressable style={styles.headerActionButton}>
-                <Ionicons name="add" size={16} color="#FFFFFF" />
-                <Text style={styles.headerActionButtonText}>New Entry</Text>
-              </Pressable>
+              <Button>
+                <Ionicons name="add" size={16} color={colors.primaryForeground} />
+                <Text style={{ color: colors.primaryForeground }}>New Entry</Text>
+              </Button>
             </Link>
-          }
-        >
-          {timeline.length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              <Text style={styles.emptyText}>No entries yet.</Text>
-              <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
-                <Pressable style={styles.emptyStateButton}>
-                  <Text style={styles.emptyStateButtonText}>Add Your First Entry</Text>
-                </Pressable>
-              </Link>
-            </View>
-          ) : (
-            timeline.map((item) => <TimelineItem key={item.id} item={item} />)
-          )}
-        </Collapsible>
+          </CardHeader>
+          <CardContent>
+            {timeline.length === 0 ? (
+              <View style={styles.emptyStateContainer}>
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No entries yet.</Text>
+                <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
+                  <Button>
+                    <Text style={[styles.emptyStateButtonText, { color: colors.primaryForeground }]}>Add Your First Entry</Text>
+                  </Button>
+                </Link>
+              </View>
+            ) : (
+              timeline.map((item) => <TimelineItem key={item.id} item={item} />)
+            )}
+          </CardContent>
+        </Card>
 
-        <Collapsible 
-          title="Tasks"
-          headerRight={
+        <Card 
+          style={{ marginTop: 12 }}
+        >
+          <CardHeader>
+            <CardTitle>Tasks</CardTitle>
             <Link href={{ pathname: '/add-task', params: { plantId: id } }} asChild>
-              <Pressable style={styles.headerActionButton}>
-                <Ionicons name="checkbox-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.headerActionButtonText}>New Task</Text>
-              </Pressable>
+              <Button>
+                <Ionicons name="checkbox-outline" size={16} color={colors.primaryForeground} />
+                <Text style={{ color: colors.primaryForeground }}>New Task</Text>
+              </Button>
             </Link>
-          }
-        >
-          <TaskList tasks={tasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
-        </Collapsible>
+          </CardHeader>
+          <CardContent>
+            <TaskList tasks={tasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+          </CardContent>
+        </Card>
 
-        <View style={styles.dangerZone}>
-          <Pressable onPress={handleDelete} style={styles.deletePlantButton}>
+        <View style={[styles.dangerZone, { borderColor: colors.border }]}>
+          <Button variant="destructive" onPress={handleDelete}>
             <Text style={styles.deletePlantButtonText}>Delete Plant</Text>
-          </Pressable>
+          </Button>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -311,17 +325,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
   },
-  headerButton: {
-    padding: 8,
-  },
-  headerEditButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-  },
   headerEditButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
@@ -335,28 +338,25 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5', // Light background
   },
   container: {
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 100, // Increased padding
+    paddingBottom: 100,
     paddingHorizontal: 16,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5', // Light background
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: Theme.Colors.light.card,
     borderRadius: 16,
     padding: Theme.Spacing.medium,
-    marginTop: 24, // Adjusted to push stats down
+    marginTop: 24,
     marginHorizontal: 8,
     elevation: 5,
     shadowColor: '#000',
@@ -370,54 +370,25 @@ const styles = StyleSheet.create({
   },
   statItem: {
     alignItems: 'center',
-    width: '30%', // For expanded view
-    marginBottom: 12, // For expanded view
+    width: '30%',
+    marginBottom: 12,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
     marginTop: 4,
     textAlign: 'center',
   },
   statValue: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
   },
-  showMoreButton: {
-      alignItems: 'center',
-      padding: 8,
-      marginBottom: 12,
-  },
   showMoreButtonText: {
-      color: '#006400',
       fontWeight: 'bold',
-  },
-  headerActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#006400',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  headerActionButtonText: {
-    color: '#FFFFFF',
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: 'bold',
   },
   emptyText: {
     textAlign: 'center',
     marginVertical: 20,
-    color: '#888',
     fontSize: 16,
   },
   timelinePhoto: {
@@ -431,12 +402,10 @@ const styles = StyleSheet.create({
   },
   timelineDate: {
     fontSize: 12,
-    color: '#666666', // Medium dark text
     marginBottom: 8,
   },
   timelineText: {
     fontSize: 16,
-    color: '#333333', // Dark text
     lineHeight: 22,
   },
   taskCard: {
@@ -452,8 +421,6 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#006400', // Dark green border
-    backgroundColor: '#006400', // Dark green background when checked
     marginRight: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -463,60 +430,28 @@ const styles = StyleSheet.create({
   },
   taskTitle: {
     fontSize: 16,
-    color: '#333333', // Dark text
-  },
-  taskTitleCompleted: {
-    textDecorationLine: 'line-through',
-    color: '#888',
   },
   taskDueDate: {
     fontSize: 12,
-    color: '#666666', // Medium dark text
     marginTop: 4,
   },
-  taskDueDateOverdue: {
-    color: '#E57373',
-    fontWeight: 'bold',
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  dangerZone: {
-    marginTop: 40,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderColor: '#EEEEEE',
-    alignItems: 'center',
-  },
-  deletePlantButton: {
-    borderWidth: 1,
-    borderColor: '#E57373',
-    borderRadius: 30,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
   deletePlantButtonText: {
-    color: '#E57373',
     fontSize: 16,
     fontWeight: 'bold',
   },
   skeleton: {
-    backgroundColor: '#E0E0E0',
     borderRadius: 12,
   },
   skeletonCard: {
-    backgroundColor: '#E0E0E0',
     marginBottom: 16,
     borderRadius: 12,
   },
   skeletonText: {
-    backgroundColor: '#C0C0C0',
     height: 20,
     marginBottom: 10,
     borderRadius: 4,
   },
   skeletonStat: {
-    backgroundColor: '#C0C0C0',
     height: 40,
     width: 80,
     borderRadius: 8,
@@ -525,16 +460,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
   },
-  emptyStateButton: {
-    backgroundColor: '#006400',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 30,
-    marginTop: 16,
-  },
   emptyStateButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
-})
+  dangerZone: {
+    marginTop: 40,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    alignItems: 'center',
+  },
+});

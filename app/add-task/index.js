@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert, Text, Platform, Pressable, Switch } from 'react-native';
+import { View, StyleSheet, Alert, Text, Platform, Switch } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { createTask, getGardenBeds } from '../../src/services/api';
 import { Picker } from '@react-native-picker/picker';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 
 export default function AddTaskScreen() {
   const { plantId } = useLocalSearchParams();
@@ -72,19 +74,20 @@ export default function AddTaskScreen() {
 
   return (
     <View style={styles.container}>
-      <TextInput
-        style={styles.input}
+      <Input
         placeholder="Task Title (e.g., Water, Fertilize)"
         value={title}
         onChangeText={setTitle}
       />
-      <TextInput
-        style={[styles.input, styles.textArea]}
+      <View style={{ height: 12 }} />
+      <Input
         placeholder="Notes (optional)"
         value={notes}
         onChangeText={setNotes}
         multiline
+        style={{ height: 100, textAlignVertical: 'top' }}
       />
+      <View style={{ height: 12 }} />
       <Picker
         selectedValue={selectedBed}
         onValueChange={(itemValue) => setSelectedBed(itemValue)}
@@ -105,22 +108,21 @@ export default function AddTaskScreen() {
         <Text style={styles.dateLabel}>Repeat:</Text>
         <View style={styles.recurrenceOptions}>
           {['none', 'daily', 'weekly', 'monthly'].map((option) => (
-            <Pressable
+            <Button
               key={option}
-              style={[styles.recurrenceButton, recurrence === option && styles.recurrenceButtonSelected]}
+              variant={recurrence === option ? 'default' : 'outline'}
+              size="sm"
               onPress={() => setRecurrence(option)}
             >
-              <Text style={[styles.recurrenceButtonText, recurrence === option && styles.recurrenceButtonTextSelected]}>{option.charAt(0).toUpperCase() + option.slice(1)}</Text>
-            </Pressable>
+              {option.charAt(0).toUpperCase() + option.slice(1)}
+            </Button>
           ))}
         </View>
       </View>
 
       <View style={styles.dateContainer}>
         <Text style={styles.dateLabel}>Due Date:</Text>
-        {/* On Android, the picker is a modal, so we show a button to open it. */}
-        {/* On iOS, the picker can be displayed inline permanently. */}
-        {Platform.OS === 'android' && <Button onPress={() => setShowDatePicker(true)} title="Select Date" />}
+        {Platform.OS === 'android' && <Button variant="outline" onPress={() => setShowDatePicker(true)}>Select Date</Button>}
         {(showDatePicker || Platform.OS === 'ios') && (
           <DateTimePicker
             testID="dateTimePicker"
@@ -132,15 +134,15 @@ export default function AddTaskScreen() {
           />
         )}
       </View>
-      <Button title={isSaving ? "Saving..." : "Save Task"} onPress={handleSave} disabled={isSaving} />
+      <Button onPress={handleSave} disabled={isSaving}>
+        {isSaving ? "Saving..." : "Save Task"}
+      </Button>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 5, marginBottom: 20 },
-  textArea: { height: 100, textAlignVertical: 'top' },
+  container: { flex: 1, padding: 20 },
   picker: { borderWidth: 1, borderColor: '#ccc', marginBottom: 20, borderRadius: 5 },
   checkboxContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   checkboxLabel: { fontSize: 16 },
@@ -150,22 +152,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginTop: 10,
-  },
-  recurrenceButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-  },
-  recurrenceButtonSelected: {
-    backgroundColor: '#007AFF',
-  },
-  recurrenceButtonText: {
-    color: '#007AFF',
-  },
-  recurrenceButtonTextSelected: {
-    color: '#fff',
   },
   dateLabel: { fontSize: 16 },
 });

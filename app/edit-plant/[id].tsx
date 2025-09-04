@@ -1,17 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
-import { View, Alert, TextInput, StyleSheet, ScrollView, Button, Modal, TouchableOpacity, FlatList, useColorScheme, Platform } from 'react-native';
+import { View, Alert, StyleSheet, ScrollView, useColorScheme, Text } from 'react-native';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Plant, PlantingMethod } from '../../types/plant';
-import { Feather } from '@expo/vector-icons';
 import { supabase } from '../../src/services/supabase';
-import { ThemedText } from '../../components/ThemedText';
 import { Colors } from '../../constants/Colors';
 import { Theme } from '../../constants/Theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-
-const seedCompanies = ["Burpee", "Baker Creek Heirloom Seeds", "Johnny's Selected Seeds", "Seed Savers Exchange", "Ferry-Morse", "Gurney's Seed & Nursery Co.", "Harris Seeds", "High Mowing Organic Seeds", "Territorial Seed Company", "Botanical Interests"];
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
+import { DatePicker } from '../../components/ui/DatePicker';
 
 const EditPlantScreen = () => {
   const router = useRouter();
@@ -22,31 +20,25 @@ const EditPlantScreen = () => {
     name: '',
     variety: '',
     plantingMethod: 'directSow',
-    seedPurchasedFrom: seedCompanies[0],
+    seedPurchasedFrom: undefined,
     daysToHarvest: undefined,
     gardenBed: undefined,
   });
 
-  const [gardenBeds, setGardenBeds] = useState<{ id: string, name: string }[]>([]);
-  const [isAddSeedCompanyModalVisible, setAddSeedCompanyModalVisible] = useState(false);
-  const [newSeedCompanyName, setNewSeedCompanyName] = useState('');
-  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
-  const [datePickerField, setDatePickerField] = useState<'seedPlantedDate' | 'transplantedDate'>('seedPlantedDate');
-  const [datePickerTitle, setDatePickerTitle] = useState('');
-  const [isLocationModalVisible, setLocationModalVisible] = useState(false);
-  const [isSeedCompanyPickerModalVisible, setSeedCompanyPickerModalVisible] = useState(false);
-  const [allSeedCompanies, setAllSeedCompanies] = useState(seedCompanies);
+  const [gardenBeds, setGardenBeds] = useState<{ label: string, value: any }[]>([]);
+  const [seedCompanies, setSeedCompanies] = useState<{ label: string, value: any }[]>([]);
 
   useEffect(() => {
-    const fetchGardenBeds = async () => {
-      const { data, error } = await supabase.from('garden_beds').select('id, name');
-      if (error) {
-        console.error('Error fetching garden beds:', error);
-      } else {
-        setGardenBeds(data);
-      }
+    const fetchInitialData = async () => {
+      const { data: bedsData, error: bedsError } = await supabase.from('garden_beds').select('id, name');
+      if (bedsError) console.error('Error fetching garden beds:', bedsError);
+      else setGardenBeds(bedsData.map(bed => ({ label: bed.name, value: bed.id })));
+
+      const { data: companiesData, error: companiesError } = await supabase.from('seed_companies').select('id, name');
+      if (companiesError) console.error('Error fetching seed companies:', companiesError);
+      else setSeedCompanies(companiesData.map(c => ({ label: c.name, value: c.id })));
     };
-    fetchGardenBeds();
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
@@ -55,7 +47,7 @@ const EditPlantScreen = () => {
         const { data, error } = await supabase
           .from('plants')
           .select(`
-            *, 
+            *,
             garden_beds (name)
           `)
           .eq('id', id)
@@ -81,41 +73,16 @@ const EditPlantScreen = () => {
             seedPlantedDate: data.planted_date ? new Date(data.planted_date) : undefined,
             transplantedDate: data.transplanted_date ? new Date(data.transplanted_date) : undefined,
             daysToHarvest: data.days_to_harvest,
-            gardenBed: data.garden_beds?.name
+            gardenBed: data.bed_id
           });
         }
       };
       fetchPlantData();
     }
-  }, [id, gardenBeds]);
+  }, [id]);
 
   const handleInputChange = (field: keyof Plant, value: any) => {
     setPlant(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-        setDatePickerVisible(false);
-    }
-    if (selectedDate) {
-      handleInputChange(datePickerField, selectedDate);
-    }
-  };
-
-  const showDatePicker = (field: 'seedPlantedDate' | 'transplantedDate', title: string) => {
-    setDatePickerField(field);
-    setDatePickerTitle(title);
-    setDatePickerVisible(true);
-  };
-
-  const handleAddNewSeedCompany = () => {
-    if (newSeedCompanyName.trim() !== '' && !allSeedCompanies.includes(newSeedCompanyName.trim())) {
-      const updatedCompanies = [...allSeedCompanies, newSeedCompanyName.trim()];
-      setAllSeedCompanies(updatedCompanies);
-      handleInputChange('seedPurchasedFrom', newSeedCompanyName.trim());
-    }
-    setAddSeedCompanyModalVisible(false);
-    setNewSeedCompanyName('');
   };
 
   const handleSave = async () => {
@@ -135,12 +102,6 @@ const EditPlantScreen = () => {
         return;
     }
 
-    const selectedBed = gardenBeds.find(bed => bed.name === plant.gardenBed);
-    if (!selectedBed) {
-        Alert.alert("Validation Error", "Invalid garden bed selected.");
-        return;
-    }
-
     const plantToSave = {
         owner_id: user.id,
         name: plant.name,
@@ -152,10 +113,10 @@ const EditPlantScreen = () => {
         transplanted_date: plant.transplantedDate,
         days_to_harvest: plant.daysToHarvest,
         expected_harvest_date: plant.expectedHarvestDate,
-        bed_id: selectedBed.id,
+        bed_id: plant.gardenBed,
     };
 
-    const { data, error } = id 
+    const { error } = id 
       ? await supabase.from('plants').update(plantToSave).eq('id', id).select()
       : await supabase.from('plants').insert([plantToSave]).select();
 
@@ -189,41 +150,53 @@ const EditPlantScreen = () => {
     } else {
       handleInputChange('expectedHarvestDate', undefined);
     }
-  }, [plant.seedPlantedDate, plant.transplantedDate, plant.daysToHarvest, plant.plantingMethod]);
+  }, [plant.seedPlantedDate, plant.transplantedDate, plant.daysToHarvest, plant.plantingMethod, plant]);
 
-  const styles = getStyles(colorScheme);
-
-  const datePickerComponent = (
-    <DateTimePicker
-        value={plant[datePickerField] || new Date()}
-        mode="date"
-        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-        onChange={handleDateChange}
-    />
-  );
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: Theme.Spacing.medium,
+      backgroundColor: Colors[colorScheme].background,
+    },
+    section: {
+      marginBottom: Theme.Spacing.large,
+    },
+    subtitle: {
+      fontSize: Theme.Fonts.sizes.large,
+      fontWeight: Theme.Fonts.weights.bold,
+      marginBottom: Theme.Spacing.medium,
+      color: Colors[colorScheme].text,
+    },
+    label: {
+      fontSize: Theme.Fonts.sizes.medium,
+      fontWeight: Theme.Fonts.weights.medium,
+      marginBottom: Theme.Spacing.small,
+      color: Colors[colorScheme].text,
+    },
+    disabledInput: {
+      backgroundColor: Colors[colorScheme].lightGray,
+      color: Colors[colorScheme].darkGray,
+    },
+  });
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.section}>
-        <ThemedText type="subtitle">Plant Identity</ThemedText>
-        <TextInput
-          style={styles.input}
+        <Text style={styles.subtitle}>Plant Identity</Text>
+        <Input
           placeholder="Plant Name (e.g., Tomato)"
           value={plant.name}
           onChangeText={(text) => handleInputChange('name', text)}
-          placeholderTextColor={Colors[colorScheme].mutedForeground}
         />
-        <TextInput
-          style={styles.input}
+        <Input
           placeholder="Variety (e.g., Cherokee Purple)"
           value={plant.variety}
           onChangeText={(text) => handleInputChange('variety', text)}
-          placeholderTextColor={Colors[colorScheme].mutedForeground}
         />
       </View>
 
       <View style={styles.section}>
-        <ThemedText type="subtitle">Planting Method</ThemedText>
+        <Text style={styles.subtitle}>Planting Method</Text>
         <SegmentedControl
           values={['Direct Sow', 'Transplant', 'Purchased Start']}
           selectedIndex={['directSow', 'transplant', 'purchasedStart'].indexOf(plant.plantingMethod!)}
@@ -238,173 +211,85 @@ const EditPlantScreen = () => {
       </View>
 
       <View style={styles.section}>
-        <ThemedText type="subtitle">Details</ThemedText>
+        <Text style={styles.subtitle}>Details</Text>
         {(plant.plantingMethod === 'directSow' || plant.plantingMethod === 'transplant') && (
           <>
-            <ThemedText style={styles.label}>Seed Purchased From</ThemedText>
-            <TouchableOpacity style={styles.dropdownButton} onPress={() => setSeedCompanyPickerModalVisible(true)}>
-                <ThemedText>{plant.seedPurchasedFrom || 'Select a company'}</ThemedText>
-                <Feather name="chevron-down" size={24} color={Colors[colorScheme].text} />
-            </TouchableOpacity>
-            <ThemedText style={styles.label}>Seed Planted Date</ThemedText>
-            <TouchableOpacity onPress={() => showDatePicker('seedPlantedDate', 'Select Seed Planted Date')} style={styles.button}>
-              <ThemedText style={styles.buttonText}>{plant.seedPlantedDate ? plant.seedPlantedDate.toLocaleDateString() : 'Select Date'}</ThemedText>
-            </TouchableOpacity>
+            <Text style={styles.label}>Seed Purchased From</Text>
+            <Select
+              selectedValue={plant.seedPurchasedFrom}
+              onValueChange={(value) => handleInputChange('seedPurchasedFrom', value)}
+              options={[
+                { label: 'Select a company', value: null },
+                ...seedCompanies
+              ]}
+            />
+            <Text style={styles.label}>Seed Planted Date</Text>
+            <DatePicker
+              value={plant.seedPlantedDate}
+              onValueChange={(date) => handleInputChange('seedPlantedDate', date)}
+              placeholder="Select Date"
+            />
           </>
         )}
         {plant.plantingMethod === 'purchasedStart' && (
           <>
-            <ThemedText style={styles.label}>Purchased From</ThemedText>
-            <TextInput
-                style={styles.input}
+            <Text style={styles.label}>Purchased From</Text>
+            <Input
                 placeholder="e.g., Home Depot"
                 value={plant.purchasedFrom}
                 onChangeText={(text) => handleInputChange('purchasedFrom', text)}
-                placeholderTextColor={Colors[colorScheme].mutedForeground}
             />
           </>
         )}
         {(plant.plantingMethod === 'transplant' || plant.plantingMethod === 'purchasedStart') && (
             <>
-                <ThemedText style={styles.label}>Transplant Date</ThemedText>
-                <TouchableOpacity onPress={() => showDatePicker('transplantedDate', 'Select Transplant Date')} style={styles.button}>
-                    <ThemedText style={styles.buttonText}>{plant.transplantedDate ? plant.transplantedDate.toLocaleDateString() : 'Select Date'}</ThemedText>
-                </TouchableOpacity>
+                <Text style={styles.label}>Transplant Date</Text>
+                <DatePicker
+                  value={plant.transplantedDate}
+                  onValueChange={(date) => handleInputChange('transplantedDate', date)}
+                  placeholder="Select Date"
+                />
             </>
         )}
       </View>
 
       <View style={styles.section}>
-        <ThemedText type="subtitle">Harvest Details</ThemedText>
-        <ThemedText style={styles.label}>Days to Harvest</ThemedText>
-        <TextInput
-          style={styles.input}
+        <Text style={styles.subtitle}>Harvest Details</Text>
+        <Text style={styles.label}>Days to Harvest</Text>
+        <Input
           placeholder="e.g., 75"
           keyboardType="numeric"
           value={plant.daysToHarvest?.toString() || ''}
           onChangeText={(text) => handleInputChange('daysToHarvest', text ? parseInt(text, 10) : undefined)}
-          placeholderTextColor={Colors[colorScheme].mutedForeground}
         />
-        <ThemedText style={styles.label}>Expected Harvest Date</ThemedText>
-        <TextInput
-          style={[styles.input, styles.disabledInput]}
+        <Text style={styles.label}>Expected Harvest Date</Text>
+        <Input
+          style={styles.disabledInput}
           editable={false}
           value={plant.expectedHarvestDate ? plant.expectedHarvestDate.toLocaleDateString() : 'Calculated automatically'}
-          placeholderTextColor={Colors[colorScheme].mutedForeground}
         />
       </View>
 
       <View style={styles.section}>
-        <ThemedText type="subtitle">Location</ThemedText>
-        <TouchableOpacity style={styles.dropdownButton} onPress={() => setLocationModalVisible(true)}>
-            <ThemedText>{plant.gardenBed || 'Select a Location'}</ThemedText>
-            <Feather name="chevron-down" size={24} color={Colors[colorScheme].text} />
-        </TouchableOpacity>
+        <Text style={styles.subtitle}>Location</Text>
+        <Select
+          selectedValue={plant.gardenBed}
+          onValueChange={(value) => handleInputChange('gardenBed', value)}
+          options={[
+            { label: 'Select a Location', value: null },
+            ...gardenBeds
+          ]}
+        />
       </View>
 
       <View style={styles.section}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <ThemedText style={styles.buttonText}>Save Plant</ThemedText>
-        </TouchableOpacity>
+        <Button onPress={handleSave}>Save Plant</Button>
       </View>
-
-      {isDatePickerVisible && Platform.OS === 'android' && datePickerComponent}
-      {isDatePickerVisible && Platform.OS === 'ios' && (
-        <Modal
-            transparent={true}
-            animationType="slide"
-            visible={isDatePickerVisible}
-            onRequestClose={() => setDatePickerVisible(false)}>
-            <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
-                    <ThemedText style={styles.modalTitle}>{datePickerTitle}</ThemedText>
-                    {datePickerComponent}
-                    <Button title="Done" onPress={() => setDatePickerVisible(false)} color={Colors[colorScheme].primaryGreen} />
-                </View>
-            </View>
-        </Modal>
-      )}
-
-      <Modal
-        transparent={true}
-        animationType="slide"
-        visible={isLocationModalVisible}
-        onRequestClose={() => setLocationModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <FlatList
-                data={gardenBeds}
-                keyExtractor={item => item.id}
-                renderItem={({item}) => (
-                    <TouchableOpacity style={styles.modalItem}
-                        onPress={() => {
-                            handleInputChange('gardenBed', item.name);
-                            setLocationModalVisible(false);
-                        }}>
-                        <ThemedText>{item.name}</ThemedText>
-                    </TouchableOpacity>
-                )}
-            />
-            <Button title="Cancel" onPress={() => setLocationModalVisible(false)} color={Colors[colorScheme].primaryGreen} />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        transparent={true}
-        animationType="slide"
-        visible={isSeedCompanyPickerModalVisible}
-        onRequestClose={() => setSeedCompanyPickerModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <FlatList
-                data={[...allSeedCompanies, 'Other...']}
-                keyExtractor={item => item}
-                renderItem={({item}) => (
-                    <TouchableOpacity style={styles.modalItem}
-                        onPress={() => {
-                            if (item === 'Other...') {
-                                setSeedCompanyPickerModalVisible(false);
-                                setAddSeedCompanyModalVisible(true);
-                            } else {
-                                handleInputChange('seedPurchasedFrom', item);
-                                setSeedCompanyPickerModalVisible(false);
-                            }
-                        }}>
-                        <ThemedText>{item}</ThemedText>
-                    </TouchableOpacity>
-                )}
-            />
-            <Button title="Cancel" onPress={() => setSeedCompanyPickerModalVisible(false)} color={Colors[colorScheme].primaryGreen} />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        transparent={true}
-        animationType="slide"
-        visible={isAddSeedCompanyModalVisible}
-        onRequestClose={() => setAddSeedCompanyModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <ThemedText style={styles.modalTitle}>Add New Seed Company</ThemedText>
-            <TextInput
-              style={styles.input}
-              placeholder="Company Name"
-              value={newSeedCompanyName}
-              onChangeText={setNewSeedCompanyName}
-              placeholderTextColor={Colors[colorScheme].mutedForeground}
-            />
-            <Button title="Add" onPress={handleAddNewSeedCompany} color={Colors[colorScheme].primaryGreen} />
-            <Button title="Cancel" onPress={() => setAddSeedCompanyModalVisible(false)} color={Colors[colorScheme].primaryGreen} />
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 };
 
-const getStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: Theme.Spacing.medium,
@@ -413,80 +298,22 @@ const getStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   section: {
     marginBottom: Theme.Spacing.large,
   },
+  subtitle: {
+    fontSize: Theme.Fonts.sizes.large,
+    fontWeight: Theme.Fonts.weights.bold,
+    marginBottom: Theme.Spacing.medium,
+    color: Colors[colorScheme].text,
+  },
   label: {
     fontSize: Theme.Fonts.sizes.medium,
     fontWeight: Theme.Fonts.weights.medium,
     marginBottom: Theme.Spacing.small,
     color: Colors[colorScheme].text,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].muted,
-    borderRadius: 8,
-    padding: Theme.Spacing.medium,
-    marginBottom: Theme.Spacing.medium,
-    fontSize: Theme.Fonts.sizes.medium,
-    color: Colors[colorScheme].text,
-    backgroundColor: Colors[colorScheme].cardBackground,
-  },
-  dropdownButton: {
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].muted,
-    borderRadius: 8,
-    padding: Theme.Spacing.medium,
-    marginBottom: Theme.Spacing.medium,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: Colors[colorScheme].cardBackground,
-  },
   disabledInput: {
     backgroundColor: Colors[colorScheme].lightGray,
     color: Colors[colorScheme].darkGray,
   },
-  button: {
-    backgroundColor: Colors[colorScheme].primaryGreen,
-    padding: Theme.Spacing.medium,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: Theme.Spacing.medium,
-  },
-  saveButton: {
-    backgroundColor: Colors[colorScheme].accentGreen,
-    padding: Theme.Spacing.large,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: Colors[colorScheme].background,
-    fontSize: Theme.Fonts.sizes.medium,
-    fontWeight: Theme.Fonts.weights.bold,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: Colors[colorScheme].cardBackground,
-    padding: Theme.Spacing.large,
-    borderRadius: 10,
-    width: '80%',
-    maxHeight: '60%',
-  },
-  modalTitle: {
-    fontSize: Theme.Fonts.sizes.large,
-    fontWeight: Theme.Fonts.weights.bold,
-    marginBottom: Theme.Spacing.medium,
-    textAlign: 'center',
-    color: Colors[colorScheme].text,
-  },
-  modalItem: {
-      padding: Theme.Spacing.medium,
-      borderBottomWidth: 1,
-      borderBottomColor: Colors[colorScheme].lightGray,
-  }
 });
 
 export default EditPlantScreen;

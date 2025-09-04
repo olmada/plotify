@@ -22,6 +22,12 @@ export const getPlants = async () => {
   return data;
 };
 
+export const getPlantTemplates = async () => {
+  const { data, error } = await supabase.from('plant_varieties').select('*');
+  if (error) throw error;
+  return data;
+};
+
 export const getPlantById = async (id) => {
   const owner_id = await getUserId();
   const { data, error } = await supabase

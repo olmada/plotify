@@ -1,34 +1,30 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, SplashScreen } from 'expo-router';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+
+SplashScreen.preventAutoHideAsync();
 
 function InitialLayout() {
   const { session, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
-  // VALIDATION STEP: Log the state on each render.
-  console.log(`[Auth State] loading: ${loading}, session: !!${session}, segments: [${segments.join(', ')}]`);
-
   useEffect(() => {
     if (loading) return;
 
     const inTabsGroup = segments[0] === '(tabs)';
 
-    if (!session && inTabsGroup) {
-      router.replace('/');
-    } else if (session && !inTabsGroup) {
-      // Prevent redirection when opening a modal
-      if (segments[0] === 'add' || segments[0] === 'edit-plant' || segments[0] === 'add-entry' || segments[0] === 'add-task' || segments[0] === 'add-garden-bed') {
-        return;
-      }
-      router.replace('/(tabs)/plants');
+    if (session && !inTabsGroup) {
+      // User is logged in, but not in the tabs group, redirect to tabs
+      router.replace('/(tabs)');
+    } else if (!session && inTabsGroup) {
+      // User is not logged in, but in the tabs group, redirect to auth
+      router.replace('/(auth)');
     }
-  }, [session, loading, segments]);
+    SplashScreen.hideAsync();
+  }, [session, loading, segments, router]);
 
-  // This is the key to preventing the race condition.
-  // We prevent the <Stack> from rendering until we know the auth state.
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -40,21 +36,12 @@ function InitialLayout() {
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="add" options={{ title: 'Add New Plant', presentation: 'modal' }} />
-      <Stack.Screen
-        name="edit-plant/[id]"
-        options={{ title: 'Edit Plant', presentation: 'modal' }}
-      />
-      <Stack.Screen
-        name="add-entry/[plantId]"
-        options={{ title: 'New Entry', presentation: 'modal' }}
-      />
-      <Stack.Screen
-        name="add-task/[plantId]"
-        options={{ title: 'New Task', presentation: 'modal' }}
-      />
-      <Stack.Screen name="add-garden-bed" options={{ title: 'Add New Garden Bed', presentation: 'modal' }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="add" options={{ presentation: 'modal', headerShown: false }} />
+      <Stack.Screen name="add-garden-bed" options={{ presentation: 'modal', headerShown: false }} />
+      <Stack.Screen name="add-entry/[plantId]" options={{ presentation: 'modal', headerShown: false }} />
+      <Stack.Screen name="add-task" options={{ presentation: 'modal', headerShown: false }} />
+      <Stack.Screen name="edit-plant/[id]" options={{ presentation: 'modal', headerShown: false }} />
     </Stack>
   );
 }
