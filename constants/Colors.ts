@@ -5,59 +5,59 @@
 
 export const Colors = {
   light: {
-    text: '#1d1d1f',
+    text: '#1d1d1f', // foreground
     background: '#f8f9fa',
-    tint: '#2e7d32',
-    icon: '#1d1d1f',
-    tabIconDefault: '#8e8e93',
-    tabIconSelected: '#2e7d32',
-    primary: '#2e7d32',
-    primaryForeground: '#fff',
-    secondary: '#8d6e63',
-    secondaryForeground: '#fff',
+    tint: '#2E7D32', // primary
+    icon: '#1d1d1f', // foreground
+    tabIconDefault: '#8e8e93', // muted-foreground
+    tabIconSelected: '#2E7D32', // primary
+    primary: '#2E7D32',
+    primaryForeground: '#ffffff',
+    secondary: '#8D6E63',
+    secondaryForeground: '#ffffff',
     muted: '#f2f2f7',
     mutedForeground: '#8e8e93',
     accent: '#e8f5e8',
-    accentForeground: '#2e7d32',
+    accentForeground: '#2E7D32',
     destructive: '#ff3b30',
-    destructiveForeground: '#fff',
-    border: '#0000001f',
+    destructiveForeground: '#ffffff',
+    border: 'rgba(0, 0, 0, 0.12)',
     input: 'transparent',
-    inputBackground: '#f2f2f7',
+    inputBackground: '#f2f2f7', // muted
     switchBackground: '#e9ecef',
-    ring: '#2e7d32',
-    card: '#fff',
+    ring: '#2E7D32',
+    card: '#ffffff',
     cardForeground: '#1d1d1f',
-    popover: '#fff',
+    popover: '#ffffff',
     popoverForeground: '#1d1d1f',
-    shadowColor: '#000',
+    shadowColor: '#000', // Not in CSS, keeping existing
   },
   dark: {
-    text: '#fff',
-    background: '#000',
-    tint: '#30d158',
-    icon: '#fff',
-    tabIconDefault: '#8e8e93',
-    tabIconSelected: '#30d158',
+    text: '#ffffff', // foreground
+    background: '#000000',
+    tint: '#30d158', // primary
+    icon: '#ffffff', // foreground
+    tabIconDefault: '#8e8e93', // muted-foreground
+    tabIconSelected: '#30d158', // primary
     primary: '#30d158',
-    primaryForeground: '#000',
+    primaryForeground: '#000000',
     secondary: '#a0845c',
-    secondaryForeground: '#fff',
+    secondaryForeground: '#ffffff',
     muted: '#2c2c2e',
     mutedForeground: '#8e8e93',
     accent: '#1a3d1c',
     accentForeground: '#30d158',
     destructive: '#ff453a',
-    destructiveForeground: '#fff',
-    border: '#ffffff1f',
+    destructiveForeground: '#ffffff',
+    border: 'rgba(255, 255, 255, 0.12)',
     input: '#2c2c2e',
-    inputBackground: '#2c2c2e', // Assuming same as input
-    switchBackground: '#2c2c2e', // Assuming same as input
+    inputBackground: '#2c2c2e', // muted
+    switchBackground: '#2c2c2e', // muted
     ring: '#30d158',
     card: '#1c1c1e',
-    cardForeground: '#fff',
+    cardForeground: '#ffffff',
     popover: '#1c1c1e',
-    popoverForeground: '#fff',
-    shadowColor: '#fff',
+    popoverForeground: '#ffffff',
+    shadowColor: '#fff', // Not in CSS, keeping existing
   },
 };

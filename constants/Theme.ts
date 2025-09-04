@@ -2,23 +2,23 @@ import { Colors } from './Colors';
 
 const Fonts = {
   sizes: {
-    small: 12,
-    medium: 16,
-    large: 20,
-    xlarge: 24,
+    small: 12, // --text-xs: 0.75rem (0.75 * 16px = 12px)
+    medium: 16, // --text-base: 1rem (1 * 16px = 16px)
+    large: 20, // --text-xl: 1.25rem (1.25 * 16px = 20px)
+    xlarge: 24, // --text-2xl: 1.5rem (1.5 * 16px = 24px)
   },
   weights: {
-    light: '300',
-    regular: '400',
-    medium: '500',
-    bold: 'bold',
+    light: '300', // Keep existing, not found in CSS
+    regular: '400', // --font-weight-normal
+    medium: '500', // --font-weight-medium
+    bold: 'bold', // Keep existing, not found in CSS
   },
 };
 
 const Spacing = {
-  small: 8,
-  medium: 16,
-  large: 24,
+  small: 8, // 2 * var(--spacing) = 2 * 4px = 8px
+  medium: 16, // 4 * var(--spacing) = 4 * 4px = 16px
+  large: 24, // 6 * var(--spacing) = 6 * 4px = 24px
 };
 
 export const Theme = {

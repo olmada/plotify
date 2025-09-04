@@ -7,16 +7,25 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Collapsible } from '../../../components/Collapsible';
 import Card from '../../../components/ui/Card';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Theme } from '../../../constants/Theme';
 
 // --- Helper Components ---
 
-const StatItem = ({ icon, label, value }) => (
-  <View style={styles.statItem}>
-    <MaterialCommunityIcons name={icon} size={24} color="#006400" />
-    <Text style={styles.statLabel}>{label}</Text>
-    <Text style={styles.statValue}>{value}</Text>
-  </View>
-);
+import { useThemeColor } from '../../../hooks/useThemeColor';
+
+const StatItem = ({ icon, label, value }) => {
+  const iconColor = useThemeColor({}, 'primary');
+  const labelColor = useThemeColor({}, 'mutedForeground');
+  const valueColor = useThemeColor({}, 'text');
+
+  return (
+    <View style={styles.statItem}>
+      <MaterialCommunityIcons name={icon} size={24} color={iconColor} />
+      <Text style={[styles.statLabel, { color: labelColor }]}>{label}</Text>
+      <Text style={[styles.statValue, { color: valueColor }]}>{value}</Text>
+    </View>
+  );
+};
 
 const TaskList = ({ tasks, onToggleTask, onDeleteTask }) => {
   if (tasks.length === 0) {
@@ -344,9 +353,9 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#F7F7F7',
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: Theme.Colors.light.card,
+    borderRadius: 16,
+    padding: Theme.Spacing.medium,
     marginTop: 24, // Adjusted to push stats down
     marginHorizontal: 8,
     elevation: 5,

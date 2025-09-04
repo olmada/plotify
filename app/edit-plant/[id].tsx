@@ -211,14 +211,14 @@ const EditPlantScreen = () => {
           placeholder="Plant Name (e.g., Tomato)"
           value={plant.name}
           onChangeText={(text) => handleInputChange('name', text)}
-          placeholderTextColor={Colors[colorScheme].mediumGray}
+          placeholderTextColor={Colors[colorScheme].mutedForeground}
         />
         <TextInput
           style={styles.input}
           placeholder="Variety (e.g., Cherokee Purple)"
           value={plant.variety}
           onChangeText={(text) => handleInputChange('variety', text)}
-          placeholderTextColor={Colors[colorScheme].mediumGray}
+          placeholderTextColor={Colors[colorScheme].mutedForeground}
         />
       </View>
 
@@ -231,7 +231,7 @@ const EditPlantScreen = () => {
             const method = ['directSow', 'transplant', 'purchasedStart'][event.nativeEvent.selectedSegmentIndex] as PlantingMethod;
             handleInputChange('plantingMethod', method);
           }}
-          tintColor={Colors[colorScheme].primaryGreen}
+          tintColor={Colors[colorScheme].primary}
           fontStyle={{ color: Colors[colorScheme].text }}
           activeFontStyle={{ color: Colors[colorScheme].background }}
         />
@@ -260,7 +260,7 @@ const EditPlantScreen = () => {
                 placeholder="e.g., Home Depot"
                 value={plant.purchasedFrom}
                 onChangeText={(text) => handleInputChange('purchasedFrom', text)}
-                placeholderTextColor={Colors[colorScheme].mediumGray}
+                placeholderTextColor={Colors[colorScheme].mutedForeground}
             />
           </>
         )}
@@ -283,14 +283,14 @@ const EditPlantScreen = () => {
           keyboardType="numeric"
           value={plant.daysToHarvest?.toString() || ''}
           onChangeText={(text) => handleInputChange('daysToHarvest', text ? parseInt(text, 10) : undefined)}
-          placeholderTextColor={Colors[colorScheme].mediumGray}
+          placeholderTextColor={Colors[colorScheme].mutedForeground}
         />
         <ThemedText style={styles.label}>Expected Harvest Date</ThemedText>
         <TextInput
           style={[styles.input, styles.disabledInput]}
           editable={false}
           value={plant.expectedHarvestDate ? plant.expectedHarvestDate.toLocaleDateString() : 'Calculated automatically'}
-          placeholderTextColor={Colors[colorScheme].mediumGray}
+          placeholderTextColor={Colors[colorScheme].mutedForeground}
         />
       </View>
 
@@ -393,7 +393,7 @@ const EditPlantScreen = () => {
               placeholder="Company Name"
               value={newSeedCompanyName}
               onChangeText={setNewSeedCompanyName}
-              placeholderTextColor={Colors[colorScheme].mediumGray}
+              placeholderTextColor={Colors[colorScheme].mutedForeground}
             />
             <Button title="Add" onPress={handleAddNewSeedCompany} color={Colors[colorScheme].primaryGreen} />
             <Button title="Cancel" onPress={() => setAddSeedCompanyModalVisible(false)} color={Colors[colorScheme].primaryGreen} />
@@ -421,7 +421,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: Colors[colorScheme].mediumGray,
+    borderColor: Colors[colorScheme].muted,
     borderRadius: 8,
     padding: Theme.Spacing.medium,
     marginBottom: Theme.Spacing.medium,
@@ -431,7 +431,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   },
   dropdownButton: {
     borderWidth: 1,
-    borderColor: Colors[colorScheme].mediumGray,
+    borderColor: Colors[colorScheme].muted,
     borderRadius: 8,
     padding: Theme.Spacing.medium,
     marginBottom: Theme.Spacing.medium,

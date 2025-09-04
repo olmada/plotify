@@ -1,16 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useAuth } from '../src/context/AuthContext';
+import { ThemedText } from './ThemedText'; // Import ThemedText
+import { Colors } from '../constants/Colors'; // Import Colors
+import { useColorScheme } from '../hooks/useColorScheme'; // Import useColorScheme
 
 const HomeScreenHeader = ({ userName, plantsCount, tasksCount }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
       <View style={styles.headerTop}>
-        <Text style={styles.welcomeMessage}>Hello, {userName}!</Text>
+        <ThemedText type="title">Hello, {userName}!</ThemedText>
       </View>
       <View style={styles.summaryContainer}>
-        <Text style={styles.summaryText}>You have {plantsCount} active plants.</Text>
-        <Text style={styles.summaryText}>Upcoming Tasks: {tasksCount}</Text>
+        <ThemedText type="default" style={{ color: colors.mutedForeground }}>You have {plantsCount} active plants.</ThemedText>
+        <ThemedText type="default" style={{ color: colors.mutedForeground }}>Upcoming Tasks: {tasksCount}</ThemedText>
       </View>
     </View>
   );
@@ -19,9 +23,7 @@ const HomeScreenHeader = ({ userName, plantsCount, tasksCount }) => {
 const styles = StyleSheet.create({
   header: {
     padding: 20,
-    backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   headerTop: {
     flexDirection: 'row',
@@ -29,21 +31,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  welcomeMessage: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
+  // welcomeMessage and summaryText styles are now handled by ThemedText
   signOutText: {
-    color: '#007AFF',
-    fontSize: 16,
+    color: '#007AFF', // Keep existing, not part of current task
+    fontSize: 16, // Keep existing
   },
   summaryContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  summaryText: {
-    fontSize: 16,
-    color: 'gray',
   },
 });
 
