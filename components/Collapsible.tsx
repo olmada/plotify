@@ -7,7 +7,7 @@ import { useColorScheme } from '../hooks/useColorScheme';
 
 export function Collapsible({ children, title, headerRight }: PropsWithChildren & { title: string, headerRight?: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(true);
-  const theme = useColorScheme() ?? 'light';
+  const theme = useColorScheme();
   const colors = Colors[theme];
   const rotation = useRef(new Animated.Value(isOpen ? 1 : 0)).current;
 

@@ -10,7 +10,7 @@ export function ParallaxScrollView({
   headerImage,
   headerBackgroundColor,
 }: PropsWithChildren & { headerImage: React.ReactNode; headerBackgroundColor: { light: string; dark: string } }) {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme();
 
   const styles = StyleSheet.create({
     container: {

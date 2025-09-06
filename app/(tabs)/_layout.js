@@ -12,7 +12,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="journal"
         options={{
-          title: 'Journal',
+          title: 'JOURNAL',
         }}
       />
       <Tabs.Screen
@@ -24,13 +24,13 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="add"
         options={{
-          title: 'Add',
+          title: 'ADD',
         }}
       />
       <Tabs.Screen
         name="beds"
         options={{
-          title: 'Beds',
+          title: 'BEDS',
         }}
       />
       <Tabs.Screen

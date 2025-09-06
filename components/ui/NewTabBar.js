@@ -8,9 +8,9 @@ const NewTabBar = ({ state, descriptors, navigation }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme];
 
-  const desiredOrder = ['journal/index', 'plants', 'add/index', 'beds/index', 'tasks'];
+  const desiredOrder = ['journal', 'plants', 'add', 'beds', 'tasks'];
   const orderedRoutes = desiredOrder.map(routeName =>
-    state.routes.find(route => route.name === routeName)
+    state.routes.find(route => route.name.startsWith(routeName))
   ).filter(Boolean);
 
   return (
@@ -24,7 +24,7 @@ const NewTabBar = ({ state, descriptors, navigation }) => {
             ? options.title
             : route.name;
 
-        const isFocused = state.index === index;
+        const isFocused = state.index === state.routes.findIndex(r => r.key === route.key);
 
         const onPress = () => {
           const event = navigation.emit({
@@ -48,17 +48,17 @@ const NewTabBar = ({ state, descriptors, navigation }) => {
         const getIcon = (routeName) => {
             const iconColor = isFocused ? colors.primary : colors.tabIconDefault;
             switch (routeName) {
-                case 'journal/index':
+                case 'journal':
                     return <BookOpen color={iconColor} />;
                 case 'plants':
                     return <Sprout color={iconColor} />;
-                case 'add/index':
+                case 'add':
                     return (
                         <View style={[styles.addButton, { backgroundColor: colors.primary }]}>
                             <Plus color={colors.primaryForeground} />
                         </View>
                     );
-                case 'beds/index':
+                case 'beds':
                     return <MapPin color={iconColor} />;
                 case 'tasks':
                     return <CheckSquare color={iconColor} />;
@@ -67,7 +67,7 @@ const NewTabBar = ({ state, descriptors, navigation }) => {
             }
         }
 
-        if (route.name === 'add/index') {
+        if (route.name.startsWith('add')) {
             return (
                 <TouchableOpacity
                     key={route.key}
@@ -81,7 +81,7 @@ const NewTabBar = ({ state, descriptors, navigation }) => {
                 >
                     {getIcon(route.name)}
                     <Text style={{ color: isFocused ? colors.primary : colors.tabIconDefault, fontSize: 12 }}>
-                        Add
+                        {label}
                     </Text>
                 </TouchableOpacity>
             )
@@ -99,7 +99,7 @@ const NewTabBar = ({ state, descriptors, navigation }) => {
             onLongPress={onLongPress}
             style={styles.tabItem}
           >
-            {getIcon(route.name)}
+            {getIcon(route.name.split('/')[0])}
             <Text style={{ color: isFocused ? colors.primary : colors.tabIconDefault, fontSize: 12 }}>
               {label}
             </Text>

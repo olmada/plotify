@@ -14,7 +14,7 @@ import { DatePicker } from '../../components/ui/DatePicker';
 const EditPlantScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme();
   
   const [plant, setPlant] = useState<Partial<Plant>>({
     name: '',

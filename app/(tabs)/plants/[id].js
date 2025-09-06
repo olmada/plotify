@@ -1,298 +1,163 @@
-import { useLocalSearchParams, Link, useFocusEffect, useRouter } from 'expo-router';
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert, Image, ScrollView, Pressable, SafeAreaView, ImageBackground } from 'react-native';
-import { getPlantById, deletePlant, getPlantTimeline, getTasksForPlant, updateTask, deleteTask } from '../../../src/services/api';
-import { RRule } from 'rrule';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { useLocalSearchParams, useNavigation, Link } from 'expo-router';
+import React, { useLayoutEffect, useState } from 'react';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Theme } from '../../../constants/Theme';
-import { useColorScheme } from '../../../hooks/useColorScheme';
-import { Colors } from '../../../constants/Colors';
 
-// --- Helper Components ---
-
-const StatItem = ({ icon, label, value }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme];
-
-  return (
-    <View style={styles.statItem}>
-      <MaterialCommunityIcons name={icon} size={24} color={colors.primary} />
-      <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-    </View>
-  );
+// New dummy data matching the requested structure
+const plant = {
+  id: '1',
+  name: 'Cherry Tomatoes',
+  variety: 'Sungold',
+  image: 'https://images.unsplash.com/photo-1594057687723-157a8defa753', // A more fitting placeholder
+  plantedFrom: 'From Seed', // 'From Seed' or 'Transplanted'
+  stage: 'Flowering',
+  location: 'Backyard North Bed',
+  lastWatered: '2 days ago',
+  sunlight: 'Full sun',
+  temperature: '68-75°F',
+  plantedDate: 'Jun 15, 2024',
+  journalEntries: [
+    { id: 'j1', title: 'First Sprouts Appeared', date: 'Jun 22, 2024', description: 'Tiny green sprouts have broken through the soil. So exciting!' },
+    { id: 'j2', title: 'Transplanted to Garden', date: 'Jul 10, 2024', description: 'Moved the seedlings to the main garden bed. They look healthy.' },
+    { id: 'j3', title: 'Noticed Some Yellow Leaves', date: 'Aug 1, 2024', description: 'A few lower leaves are yellowing. Might be a nitrogen deficiency. Added some organic fertilizer.' },
+  ],
+  tasks: [
+    { id: 't1', text: 'Fertilize with compost tea', due: 'Sep 10, 2025' },
+    { id: 't2', text: 'Check for pests', due: 'Sep 15, 2025' },
+  ],
+  photos: [
+    'https://images.unsplash.com/photo-1587049352851-d8a431dce4e8',
+    'https://images.unsplash.com/photo-1620144641248-367444d9de9d',
+  ]
 };
 
-const TaskList = ({ tasks, onToggleTask, onDeleteTask }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme];
-
-  if (tasks.length === 0) {
-    return <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No tasks here. Well done!</Text>;
-  }
-
-  return tasks.map((task) => {
-    const isOverdue = new Date(task.due_date) < new Date() && !task.completed;
-    return (
-      <Card key={task.id} style={styles.taskCard}>
-        <View style={styles.taskContainer}>
-            <Pressable onPress={() => onToggleTask(task)} style={[styles.taskCheckbox, { borderColor: colors.primary, backgroundColor: task.completed ? colors.primary : 'transparent' }]}>
-              {task.completed && <Ionicons name="checkmark" size={18} color={colors.primaryForeground} />}
-            </Pressable>
-            <View style={styles.taskTextContainer}>
-              <Text style={[styles.taskTitle, task.completed && { textDecorationLine: 'line-through', color: colors.mutedForeground }, { color: colors.text }]}>{task.title}</Text>
-              <Text style={[styles.taskDueDate, isOverdue && { color: colors.destructive }, { color: colors.mutedForeground }]}>
-                Due: {new Date(task.due_date).toLocaleDateString()}
-              </Text>
-            </View>
-            <Button variant="ghost" size="icon" onPress={() => onDeleteTask(task.id)}>
-              <Ionicons name="trash-outline" size={22} color={colors.mutedForeground} />
-            </Button>
-        </View>
-      </Card>
-    );
-  });
-};
-
-const TimelineItem = ({ item }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme];
-  const hasText = item.data.text && item.data.text.trim().length > 0;
-  const hasPhoto = item.data.photo_url || item.data.url;
-
-  return (
-    <Card style={{ padding: 0, overflow: 'hidden', marginBottom: 12 }}>
-      {hasPhoto && (
-        <Image source={{ uri: item.data.photo_url || item.data.url }} style={styles.timelinePhoto} />
-      )}
-      <View style={styles.timelineContent}>
-        <Text style={[styles.timelineDate, { color: colors.mutedForeground }]}>{new Date(item.timestamp).toLocaleString()}</Text>
-        {hasText && <Text style={[styles.timelineText, { color: colors.text }]}>{item.data.text}</Text>}
-      </View>
-    </Card>
-  );
-};
-
-const PlantDetailSkeleton = () => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme];
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        <View style={[styles.heroImage, styles.skeleton, { backgroundColor: colors.muted }]} />
-        <View style={[styles.statsContainer, { backgroundColor: colors.card }]}>
-            <View style={[styles.skeletonStat, { backgroundColor: colors.border }]} />
-            <View style={[styles.skeletonStat, { backgroundColor: colors.border }]} />
-            <View style={[styles.skeletonStat, { backgroundColor: colors.border }]} />
-        </View>
-        <Card style={[styles.skeletonCard, { backgroundColor: colors.card }]}>
-            <View style={[styles.skeletonText, { backgroundColor: colors.border }]} />
-            <View style={[styles.skeletonText, { backgroundColor: colors.border }]} />
-        </Card>
-        <Card style={[styles.skeletonCard, { backgroundColor: colors.card }]}>
-            <View style={[styles.skeletonText, { backgroundColor: colors.border }]} />
-        </Card>
-      </ScrollView>
-    </SafeAreaView>
-  );
-};
-
-
-// --- Main Screen Component ---
+const CareInfoItem = ({ icon, label, value }) => (
+  <View style={styles.careItem}>
+    <MaterialCommunityIcons name={icon} size={24} color="#34495e" style={styles.careIcon} />
+    <Text style={styles.careLabel}>{label}</Text>
+    <Text style={styles.careValue}>{value}</Text>
+  </View>
+);
 
 export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams();
-  const router = useRouter();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme];
+  const navigation = useNavigation();
+  const [activeTab, setActiveTab] = useState('Journal');
 
-  const [plant, setPlant] = useState(null);
-  const [timeline, setTimeline] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [statsExpanded, setStatsExpanded] = useState(false);
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: plant.name,
+      headerRight: () => (
+        <Link href={`/edit-plant/${id}`} asChild>
+          <TouchableOpacity style={{ marginRight: 16 }}>
+            <Ionicons name="pencil" size={24} color="#007AFF" />
+          </TouchableOpacity>
+        </Link>
+      ),
+    });
+  }, [navigation, id]);
 
-  const fetchPlantData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [plantData, timelineData, tasksData] = await Promise.all([
-        getPlantById(id),
-        getPlantTimeline(id),
-        getTasksForPlant(id),
-      ]);
-      setPlant(plantData);
-      setTimeline(timelineData.filter(item => item.type === 'journal' || item.type === 'photo'));
-      setTasks(tasksData);
-    } catch (_error) {
-      Alert.alert("Error", "Failed to fetch plant details.");
-      console.error(_error);
-    }
- finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useFocusEffect(useCallback(() => {
-    fetchPlantData();
-  }, [fetchPlantData]));
-
-  const handleDelete = () => {
-    Alert.alert(
-      "Delete Plant",
-      "Are you sure you want to permanently delete this plant and all its data?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          onPress: async () => {
-            try {
-              await deletePlant(id);
-              router.replace('/(tabs)/plants/');
-            } catch (_error) {
-              Alert.alert("Error", "Could not delete the plant.");
-            }
-          },
-          style: "destructive",
-        },
-      ]
-    );
-  };
-
-  const handleToggleTask = async (task) => {
-    if (task.recurring_rule) {
-        const rule = RRule.fromString(`DTSTART=${task.due_date}\n${task.recurring_rule}`);
-        const next = rule.after(new Date());
-        const updatedTask = next ? await updateTask(task.id, { due_date: next.toISOString() }) : null;
-        setTasks(currentTasks => 
-          updatedTask 
-            ? currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t).sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
-            : currentTasks.filter(t => t.id !== task.id)
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'Journal':
+        return (
+          <View>
+            <TouchableOpacity style={styles.addEntryButton}>
+              <Ionicons name="add" size={20} color="white" />
+              <Text style={styles.addEntryButtonText}>Add Entry</Text>
+            </TouchableOpacity>
+            {plant.journalEntries.map(entry => (
+              <View key={entry.id} style={styles.journalEntry}>
+                <Text style={styles.journalTitle}>{entry.title}</Text>
+                <Text style={styles.journalDate}>{entry.date}</Text>
+                <Text style={styles.journalDescription}>{entry.description}</Text>
+              </View>
+            ))}
+          </View>
         );
-    } else {
-      await updateTask(task.id, { completed: true });
-      setTasks(currentTasks => currentTasks.filter(t => t.id !== task.id));
+      case 'Tasks':
+        return (
+          <View>
+            {plant.tasks.map(task => (
+              <View key={task.id} style={styles.taskItem}>
+                <Text style={styles.taskText}>{task.text}</Text>
+                <Text style={styles.taskDueDate}>Due: {task.due}</Text>
+              </View>
+            ))}
+          </View>
+        );
+      case 'Photos':
+        return (
+          <View style={styles.photoGrid}>
+            {plant.photos.map((uri, index) => (
+              <Image key={index} source={{ uri }} style={styles.photo} />
+            ))}
+          </View>
+        );
+      default:
+        return null;
     }
   };
-
-  const handleDeleteTask = async (taskId) => {
-    await deleteTask(taskId);
-    setTasks(currentTasks => currentTasks.filter(t => t.id !== taskId));
-  };
-
-  if (loading) {
-    return <PlantDetailSkeleton />; 
-  }
-
-  if (!plant) {
-    return <View style={styles.container}><Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Plant not found.</Text></View>;
-  }
-
-  const allStats = [
-    { icon: 'seed', label: 'Planted From', value: plant.planted_from_seed ? 'Seed' : 'Seedling' },
-    plant.garden_bed && { icon: 'bed-empty', label: 'Garden Bed', value: plant.garden_bed.name },
-    plant.planted_date && { icon: 'calendar-check', label: 'Planted Date', value: new Date(plant.planted_date).toLocaleDateString() },
-    plant.transplanted_date && { icon: 'arrow-up-bold-box-outline', label: 'Transplanted Date', value: new Date(plant.transplanted_date).toLocaleDateString() },
-    plant.expected_harvest_date && { icon: 'calendar-star', label: 'Expected Harvest', value: new Date(plant.expected_harvest_date).toLocaleDateString() },
-    plant.family && { icon: 'leaf', label: 'Family', value: plant.family },
-    plant.purchase_date && { icon: 'cart', label: 'Purchase Date', value: new Date(plant.purchase_date).toLocaleDateString() },
-  ].filter(Boolean);
-
-  const displayedStats = statsExpanded ? allStats : allStats.slice(0, 3);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <ScrollView 
-        style={styles.container} 
-        contentContainerStyle={styles.contentContainer}
-        scrollEventThrottle={16}
-      >
-        <ImageBackground
-          source={{ uri: plant.profile_image_url || (timeline[0] && timeline[0].data.photo_url) }}
-          style={styles.heroContainer}
-        >
-          <LinearGradient
-            colors={['rgba(0,0,0,0.6)', 'transparent']}
-            style={styles.headerGradient}
-          />
-          <View style={styles.headerButtons}>
-            <Button variant="ghost" size="icon" onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color="white" />
-            </Button>
-            <Link href={{ pathname: '/edit-plant/[id]', params: { id: id } }} asChild>
-              <Button variant="ghost" onPress={() => {}}>
-                <MaterialCommunityIcons name="pencil" size={16} color="#FFFFFF" />
-                <Text style={styles.headerEditButtonText}>Edit</Text>
-              </Button>
-            </Link>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container}>
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: plant.image }} style={styles.plantImage} />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <View style={styles.imageBadge}>
+            <Text style={styles.imageBadgeText}>{plant.plantedFrom}</Text>
           </View>
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.6)']}
-            style={styles.gradient}
-          />
-          <Text style={styles.heroTitle}>{plant.name}</Text>
-        </ImageBackground>
-
-        <View style={[styles.statsContainer, statsExpanded && styles.statsContainerExpanded, { backgroundColor: colors.card }]}>
-          {displayedStats.map(stat => <StatItem key={stat.label} {...stat} />)}
         </View>
-        {allStats.length > 3 && (
-            <Button variant="ghost" onPress={() => setStatsExpanded(!statsExpanded)}>
-                <Text style={[styles.showMoreButtonText, { color: colors.primary }]}>{statsExpanded ? 'Show Less' : 'Show More'}</Text>
-            </Button>
-        )}
 
-        <Card 
-          style={{ marginTop: 12 }}
-        >
-          <CardHeader>
-            <CardTitle>Timeline</CardTitle>
-            <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
-              <Button>
-                <Ionicons name="add" size={16} color={colors.primaryForeground} />
-                <Text style={{ color: colors.primaryForeground }}>New Entry</Text>
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {timeline.length === 0 ? (
-              <View style={styles.emptyStateContainer}>
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No entries yet.</Text>
-                <Link href={{ pathname: '/add-entry/[plantId]', params: { plantId: id } }} asChild>
-                  <Button>
-                    <Text style={[styles.emptyStateButtonText, { color: colors.primaryForeground }]}>Add Your First Entry</Text>
-                  </Button>
-                </Link>
-              </View>
-            ) : (
-              timeline.map((item) => <TimelineItem key={item.id} item={item} />)
-            )}
-          </CardContent>
-        </Card>
+        <View style={styles.card}>
+          <View style={styles.primaryInfo}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Stage</Text>
+              <Text style={styles.infoValue}>{plant.stage}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Location</Text>
+              <Text style={styles.infoValue}>{plant.location}</Text>
+            </View>
+          </View>
+        </View>
 
-        <Card 
-          style={{ marginTop: 12 }}
-        >
-          <CardHeader>
-            <CardTitle>Tasks</CardTitle>
-            <Link href={{ pathname: '/add-task', params: { plantId: id } }} asChild>
-              <Button>
-                <Ionicons name="checkbox-outline" size={16} color={colors.primaryForeground} />
-                <Text style={{ color: colors.primaryForeground }}>New Task</Text>
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            <TaskList tasks={tasks} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
-          </CardContent>
-        </Card>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Care Information</Text>
+          <View style={styles.careGrid}>
+            <CareInfoItem icon="water-outline" label="Last Watered" value={plant.lastWatered} />
+            <CareInfoItem icon="white-balance-sunny" label="Sunlight" value={plant.sunlight} />
+            <CareInfoItem icon="thermometer" label="Temperature" value={plant.temperature} />
+            <CareInfoItem icon="calendar-start" label="Planted Date" value={plant.plantedDate} />
+          </View>
+        </View>
 
-        <View style={[styles.dangerZone, { borderColor: colors.border }]}>
-          <Button variant="destructive" onPress={handleDelete}>
-            <Text style={styles.deletePlantButtonText}>Delete Plant</Text>
-          </Button>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'Journal' && styles.activeTab]}
+            onPress={() => setActiveTab('Journal')}
+          >
+            <Text style={[styles.tabText, activeTab === 'Journal' && styles.activeTabText]}>Journal</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'Tasks' && styles.activeTab]}
+            onPress={() => setActiveTab('Tasks')}
+          >
+            <Text style={[styles.tabText, activeTab === 'Tasks' && styles.activeTabText]}>Tasks</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'Photos' && styles.activeTab]}
+            onPress={() => setActiveTab('Photos')}
+          >
+            <Text style={[styles.tabText, activeTab === 'Photos' && styles.activeTabText]}>Photos</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.tabContent}>
+          {renderContent()}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -300,174 +165,196 @@ export default function PlantDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  heroContainer: {
-    height: 300,
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  gradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '70%',
-  },
-  headerGradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: '30%',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 16,
-  },
-  headerEditButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 6,
-  },
-  heroTitle: {
-    color: 'white',
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
   safeArea: {
     flex: 1,
+    backgroundColor: '#F4F6F8',
   },
   container: {
     flex: 1,
   },
-  contentContainer: {
-    paddingBottom: 100,
-    paddingHorizontal: 16,
+  imageContainer: {
+    position: 'relative',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  plantImage: {
+    width: '100%',
+    height: 250,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderRadius: 16,
-    padding: Theme.Spacing.medium,
-    marginTop: 24,
-    marginHorizontal: 8,
-    elevation: 5,
+  backButton: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 8,
+    borderRadius: 20,
+  },
+  imageBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  imageBadgeText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 3,
   },
-  statsContainerExpanded: {
-      flexWrap: 'wrap',
-      justifyContent: 'flex-start',
+  primaryInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
   },
-  statItem: {
+  infoItem: {
     alignItems: 'center',
-    width: '30%',
-    marginBottom: 12,
   },
-  statLabel: {
-    fontSize: 12,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  statValue: {
+  infoLabel: {
     fontSize: 14,
+    color: '#555',
+  },
+  infoValue: {
+    fontSize: 18,
     fontWeight: 'bold',
-    textAlign: 'center',
+    color: '#2c3e50',
+    marginTop: 4,
   },
-  showMoreButtonText: {
-      fontWeight: 'bold',
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#2c3e50',
   },
-  emptyText: {
-    textAlign: 'center',
-    marginVertical: 20,
-    fontSize: 16,
+  careGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
-  timelinePhoto: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+  careItem: {
+    width: '48%',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  timelineContent: {
-    padding: 16,
-  },
-  timelineDate: {
-    fontSize: 12,
+  careIcon: {
     marginBottom: 8,
   },
-  timelineText: {
-    fontSize: 16,
-    lineHeight: 22,
+  careLabel: {
+    fontSize: 12,
+    color: '#7f8c8d',
   },
-  taskCard: {
+  careValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#34495e',
+    marginTop: 2,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginHorizontal: 16,
+    marginTop: 24,
+    backgroundColor: '#E9ECEF',
+    borderRadius: 20,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 18,
+  },
+  activeTab: {
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  tabText: {
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#495057',
+  },
+  activeTabText: {
+    color: '#2c3e50',
+  },
+  tabContent: {
+    padding: 16,
+  },
+  addEntryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#27ae60',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  addEntryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  journalEntry: {
+    backgroundColor: 'white',
+    borderRadius: 8,
     padding: 16,
     marginBottom: 12,
   },
-  taskContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  taskCheckbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    marginRight: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  taskTextContainer: {
-    flex: 1,
-  },
-  taskTitle: {
+  journalTitle: {
     fontSize: 16,
+    fontWeight: 'bold',
+    color: '#34495e',
+  },
+  journalDate: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginVertical: 4,
+  },
+  journalDescription: {
+    fontSize: 14,
+    color: '#2c3e50',
+    lineHeight: 20,
+  },
+  taskItem: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  taskText: {
+    fontSize: 16,
+    color: '#34495e',
   },
   taskDueDate: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 14,
+    color: '#c0392b',
   },
-  deletePlantButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
-  skeleton: {
-    borderRadius: 12,
-  },
-  skeletonCard: {
-    marginBottom: 16,
-    borderRadius: 12,
-  },
-  skeletonText: {
-    height: 20,
-    marginBottom: 10,
-    borderRadius: 4,
-  },
-  skeletonStat: {
-    height: 40,
-    width: 80,
+  photo: {
+    width: '48%',
+    aspectRatio: 1,
     borderRadius: 8,
-  },
-  emptyStateContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  emptyStateButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  dangerZone: {
-    marginTop: 40,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    alignItems: 'center',
+    marginBottom: '4%',
   },
 });
