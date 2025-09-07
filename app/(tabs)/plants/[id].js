@@ -1,79 +1,98 @@
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, useColorScheme } from 'react-native';
-import { useLocalSearchParams, useNavigation, Link } from 'expo-router';
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, useColorScheme, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../../../constants/Colors';
+import { formatDistanceToNow } from 'date-fns';
 
-// New dummy data matching the requested structure
-const plant = {
-  id: '1',
-  name: 'Cherry Tomatoes',
-  variety: 'Sungold',
-  image: 'https://images.unsplash.com/photo-1594057687723-157a8defa753', // A more fitting placeholder
-  plantedFrom: 'From Seed', // 'From Seed' or 'Transplanted'
-  stage: 'Flowering',
-  location: 'Backyard North Bed',
-  lastWatered: '2 days ago',
-  sunlight: 'Full sun',
-  temperature: '68-75°F',
-  plantedDate: 'Jun 15, 2024',
-  journalEntries: [
-    { id: 'j1', title: 'First Sprouts Appeared', date: 'Jun 22, 2024', description: 'Tiny green sprouts have broken through the soil. So exciting!' },
-    { id: 'j2', title: 'Transplanted to Garden', date: 'Jul 10, 2024', description: 'Moved the seedlings to the main garden bed. They look healthy.' },
-    { id: 'j3', title: 'Noticed Some Yellow Leaves', date: 'Aug 1, 2024', description: 'A few lower leaves are yellowing. Might be a nitrogen deficiency. Added some organic fertilizer.' },
-  ],
-  tasks: [
-    { id: 't1', text: 'Fertilize with compost tea', due: 'Sep 10, 2025' },
-    { id: 't2', text: 'Check for pests', due: 'Sep 15, 2025' },
-  ],
-  photos: [
-    'https://images.unsplash.com/photo-1587049352851-d8a431dce4e8',
-    'https://images.unsplash.com/photo-1620144641248-367444d9de9d',
-  ]
+import { supabase } from '../../../src/services/supabase';
+import { Colors } from '../../../constants/Colors';
+import { Theme } from '../../../constants/Theme';
+import { Button } from '../../../components/ui/Button';
+
+// Helper to format dates
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 };
 
-const CareInfoItem = ({ icon, label, value, colors }) => (
-  <View style={styles(colors).careItem}>
-    <MaterialCommunityIcons name={icon} size={24} color={colors.text} style={styles(colors).careIcon} />
-    <Text style={styles(colors).careLabel}>{label}</Text>
-    <Text style={styles(colors).careValue}>{value}</Text>
-  </View>
-);
-
-export default function PlantDetailScreen() {
+const PlantDetailScreen = () => {
   const { id } = useLocalSearchParams();
-  const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState('Journal');
+  const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme];
+  const styles = useMemo(() => getStyles(colorScheme), [colorScheme]);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: plant.name,
-      headerRight: () => (
-        <Link href={`/edit-plant/${id}`} asChild>
-          <TouchableOpacity style={{ marginRight: 16 }}>
-            <Ionicons name="pencil" size={24} color={colors.primary} />
-          </TouchableOpacity>
-        </Link>
-      ),
-    });
-  }, [navigation, id, colors]);
+  const [plant, setPlant] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('Journal');
+
+  useEffect(() => {
+    if (id) {
+      fetchPlantDetails();
+    }
+  }, [id]);
+
+  const fetchPlantDetails = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('plants')
+      .select(`
+        id,
+        name,
+        stage,
+        notes,
+        last_watered,
+        planted_date,
+        transplanted_date,
+        planted_from_seed,
+        garden_beds ( name ),
+        plant_varieties (
+          common_name,
+          scientific_name,
+          temperature_min,
+          temperature_max,
+          sunlight_requirements
+        ),
+        journals ( id, title, description, created_at ),
+        tasks ( id, title, due_date, completed ),
+        photos ( id, storage_path )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching plant details:', error);
+    } else {
+      setPlant(data);
+    }
+    setLoading(false);
+  };
+
+  if (loading) {
+    return <ActivityIndicator size="large" color={Colors[colorScheme].primary} style={{ flex: 1 }} />;
+  }
+
+  if (!plant) {
+    return <View style={styles.container}><Text style={styles.text}>Plant not found.</Text></View>;
+  }
+
+  const mainPhoto = plant.photos?.length > 0
+    ? supabase.storage.from('plant-photos').getPublicUrl(plant.photos[0].storage_path).data.publicUrl
+    : 'https://placehold.co/600x400/a2e1a2/4d4d4d?text=No+Image';
 
   const renderContent = () => {
     switch (activeTab) {
       case 'Journal':
         return (
           <View>
-            <TouchableOpacity style={styles(colors).addEntryButton}>
-              <Ionicons name="add" size={20} color="white" />
-              <Text style={styles(colors).addEntryButtonText}>Add Entry</Text>
-            </TouchableOpacity>
-            {plant.journalEntries.map(entry => (
-              <View key={entry.id} style={styles(colors).journalEntry}>
-                <Text style={styles(colors).journalTitle}>{entry.title}</Text>
-                <Text style={styles(colors).journalDate}>{entry.date}</Text>
-                <Text style={styles(colors).journalDescription}>{entry.description}</Text>
+            {plant.journals.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(entry => (
+              <View key={entry.id} style={styles.journalEntry}>
+                <Text style={styles.journalTitle}>{entry.title}</Text>
+                <Text style={styles.journalDate}>{formatDate(entry.created_at)}</Text>
+                <Text style={styles.journalDescription}>{entry.description}</Text>
               </View>
             ))}
           </View>
@@ -82,18 +101,22 @@ export default function PlantDetailScreen() {
         return (
           <View>
             {plant.tasks.map(task => (
-              <View key={task.id} style={styles(colors).taskItem}>
-                <Text style={styles(colors).taskText}>{task.text}</Text>
-                <Text style={styles(colors).taskDueDate}>Due: {task.due}</Text>
+              <View key={task.id} style={styles.taskEntry}>
+                <Text style={styles.taskTitle}>{task.title}</Text>
+                <Text style={styles.taskDueDate}>Due: {formatDate(task.due_date)}</Text>
               </View>
             ))}
           </View>
         );
       case 'Photos':
         return (
-          <View style={styles(colors).photoGrid}>
-            {plant.photos.map((uri, index) => (
-              <Image key={index} source={{ uri }} style={styles(colors).photo} />
+          <View style={styles.photoGrid}>
+            {plant.photos.map(photo => (
+              <Image
+                key={photo.id}
+                source={{ uri: supabase.storage.from('plant-photos').getPublicUrl(photo.storage_path).data.publicUrl }}
+                style={styles.photo}
+              />
             ))}
           </View>
         );
@@ -103,251 +126,229 @@ export default function PlantDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles(colors).safeArea}>
-      <ScrollView style={styles(colors).container}>
-        <View style={styles(colors).imageContainer}>
-          <Image source={{ uri: plant.image }} style={styles(colors).plantImage} />
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles(colors).backButton}>
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <View style={styles(colors).imageBadge}>
-            <Text style={styles(colors).imageBadgeText}>{plant.plantedFrom}</Text>
+    <ScrollView style={styles.container}>
+      <Stack.Screen
+        options={{
+          title: plant.name,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
+              <Ionicons name="arrow-back" size={24} color={Colors[colorScheme].primary} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity onPress={() => router.push(`/edit-plant/${id}`)} style={{ marginRight: 16 }}>
+              <Ionicons name="pencil" size={24} color={Colors[colorScheme].primary} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: mainPhoto }} style={styles.plantImage} />
+        {plant.planted_from_seed !== null && (
+          <View style={styles.imageBadge}>
+            <Text style={styles.imageBadgeText}>
+              {plant.planted_from_seed ? 'From Seed' : 'Transplanted'}
+            </Text>
           </View>
-        </View>
+        )}
+      </View>
 
-        <View style={styles(colors).card}>
-          <View style={styles(colors).primaryInfo}>
-            <View style={styles(colors).infoItem}>
-              <Text style={styles(colors).infoLabel}>Stage</Text>
-              <Text style={styles(colors).infoValue}>{plant.stage}</Text>
-            </View>
-            <View style={styles(colors).infoItem}>
-              <Text style={styles(colors).infoLabel}>Location</Text>
-              <Text style={styles(colors).infoValue}>{plant.location}</Text>
-            </View>
-          </View>
-        </View>
+      <View style={styles.card}>
+        <Text style={styles.varietyName}>{plant.plant_varieties?.common_name}</Text>
+        <Text style={styles.scientificName}>{plant.plant_varieties?.scientific_name}</Text>
+      </View>
 
-        <View style={styles(colors).card}>
-          <Text style={styles(colors).cardTitle}>Care Information</Text>
-          <View style={styles(colors).careGrid}>
-            <CareInfoItem icon="water-outline" label="Last Watered" value={plant.lastWatered} colors={colors} />
-            <CareInfoItem icon="white-balance-sunny" label="Sunlight" value={plant.sunlight} colors={colors} />
-            <CareInfoItem icon="thermometer" label="Temperature" value={plant.temperature} colors={colors} />
-            <CareInfoItem icon="calendar-start" label="Planted Date" value={plant.plantedDate} colors={colors} />
-          </View>
+      {plant.notes && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Notes</Text>
+          <Text style={styles.text}>{plant.notes}</Text>
         </View>
+      )}
 
-        <View style={styles(colors).tabContainer}>
-          <TouchableOpacity
-            style={[styles(colors).tab, activeTab === 'Journal' && styles(colors).activeTab]}
-            onPress={() => setActiveTab('Journal')}
-          >
-            <Text style={[styles(colors).tabText, activeTab === 'Journal' && styles(colors).activeTabText]}>Journal</Text>
+      <View style={styles.card}>
+        <InfoItem icon="leaf-outline" label="Stage" value={plant.stage || 'N/A'} />
+        <InfoItem icon="map-marker-outline" label="Location" value={plant.garden_beds?.name || 'N/A'} />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Care Information</Text>
+        <View style={styles.grid}>
+          <InfoItem icon="water-outline" label="Last Watered" value={plant.last_watered ? formatDistanceToNow(new Date(plant.last_watered), { addSuffix: true }) : 'N/A'} />
+          <InfoItem icon="white-balance-sunny" label="Sunlight" value={plant.plant_varieties?.sunlight_requirements || 'N/A'} />
+          <InfoItem icon="thermometer" label="Temp. Range" value={plant.plant_varieties ? `${plant.plant_varieties.temperature_min}-${plant.plant_varieties.temperature_max}°F` : 'N/A'} />
+          <InfoItem icon="calendar-outline" label="Planted Date" value={formatDate(plant.planted_date)} />
+          {plant.transplanted_date && <InfoItem icon="calendar-sync-outline" label="Transplanted" value={formatDate(plant.transplanted_date)} />}
+        </View>
+      </View>
+
+      <View style={styles.tabContainer}>
+        {['Journal', 'Tasks', 'Photos'].map(tab => (
+          <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && styles.activeTab]}>
+            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles(colors).tab, activeTab === 'Tasks' && styles(colors).activeTab]}
-            onPress={() => setActiveTab('Tasks')}
-          >
-            <Text style={[styles(colors).tabText, activeTab === 'Tasks' && styles(colors).activeTabText]}>Tasks</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles(colors).tab, activeTab === 'Photos' && styles(colors).activeTab]}
-            onPress={() => setActiveTab('Photos')}
-          >
-            <Text style={[styles(colors).tabText, activeTab === 'Photos' && styles(colors).activeTabText]}>Photos</Text>
-          </TouchableOpacity>
-        </View>
+        ))}
+      </View>
 
-        <View style={styles(colors).tabContent}>
-          {renderContent()}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <View style={styles.tabContent}>
+        {activeTab === 'Journal' && (
+          <Button onPress={() => router.push(`/add-entry/${id}`)} style={{ marginBottom: Theme.Spacing.medium }}>
+            + Add Entry
+          </Button>
+        )}
+        {renderContent()}
+      </View>
+    </ScrollView>
   );
-}
+};
 
-const styles = (colors) => StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
+const InfoItem = ({ icon, label, value }) => {
+  const colorScheme = useColorScheme();
+  const styles = useMemo(() => getStyles(colorScheme), [colorScheme]);
+  return (
+    <View style={styles.infoItem}>
+      <MaterialCommunityIcons name={icon} size={24} color={Colors[colorScheme].primary} />
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
+    </View>
+  );
+};
+
+const getStyles = (colorScheme) => StyleSheet.create({
+  varietyName: {
+    fontSize: Theme.Fonts.sizes.xlarge,
+    fontWeight: 'bold',
+    color: Colors[colorScheme].text,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  scientificName: {
+    fontSize: Theme.Fonts.sizes.medium,
+    color: Colors[colorScheme].darkGray,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginBottom: Theme.Spacing.medium,
   },
   container: {
     flex: 1,
+    backgroundColor: Colors[colorScheme].background,
+  },
+  text: {
+    color: Colors[colorScheme].text,
   },
   imageContainer: {
-    position: 'relative',
+    marginBottom: Theme.Spacing.medium,
   },
   plantImage: {
     width: '100%',
     height: 250,
   },
-  backButton: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 8,
-    borderRadius: 20,
-  },
   imageBadge: {
     position: 'absolute',
-    top: 16,
-    right: 16,
+    top: Theme.Spacing.small,
+    right: Theme.Spacing.small,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
+    paddingHorizontal: Theme.Spacing.small,
+    paddingVertical: 4,
+    borderRadius: Theme.Radii.small,
   },
   imageBadgeText: {
-    color: 'white',
-    fontSize: 14,
+    color: '#fff',
     fontWeight: 'bold',
   },
   card: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  primaryInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  infoItem: {
-    alignItems: 'center',
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: colors.text,
-  },
-  infoValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginTop: 4,
+    backgroundColor: Colors[colorScheme].card,
+    borderRadius: Theme.Radii.medium,
+    padding: Theme.Spacing.medium,
+    marginHorizontal: Theme.Spacing.medium,
+    marginBottom: Theme.Spacing.medium,
+    ...Theme.Shadows.medium,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: colors.text,
+    fontSize: Theme.Fonts.sizes.large,
+    fontWeight: Theme.Fonts.weights.bold,
+    color: Colors[colorScheme].text,
+    marginBottom: Theme.Spacing.medium,
   },
-  careGrid: {
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  careItem: {
-    width: '48%',
+  infoItem: {
     alignItems: 'center',
-    marginBottom: 16,
+    width: '48%',
+    marginBottom: Theme.Spacing.medium,
   },
-  careIcon: {
-    marginBottom: 8,
+  infoLabel: {
+    color: Colors[colorScheme].darkGray,
+    marginTop: 4,
   },
-  careLabel: {
-    fontSize: 12,
-    color: colors.text,
-  },
-  careValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: 2,
+  infoValue: {
+    color: Colors[colorScheme].text,
+    fontWeight: 'bold',
+    fontSize: Theme.Fonts.sizes.medium,
   },
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginHorizontal: 16,
-    marginTop: 24,
-    backgroundColor: colors.muted,
-    borderRadius: 20,
-    padding: 4,
+    marginHorizontal: Theme.Spacing.medium,
+    marginBottom: Theme.Spacing.medium,
+    backgroundColor: Colors[colorScheme].card,
+    borderRadius: Theme.Radii.medium,
   },
   tab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 18,
+    paddingVertical: Theme.Spacing.medium,
+    paddingHorizontal: Theme.Spacing.large,
   },
   activeTab: {
-    backgroundColor: colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
+    borderBottomColor: Colors[colorScheme].primary,
+    borderBottomWidth: 2,
   },
   tabText: {
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
+    color: Colors[colorScheme].darkGray,
+    fontWeight: 'bold',
   },
   activeTabText: {
-    color: colors.primary,
+    color: Colors[colorScheme].primary,
   },
   tabContent: {
-    padding: 16,
-  },
-  addEntryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  addEntryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    paddingHorizontal: Theme.Spacing.medium,
   },
   journalEntry: {
-    backgroundColor: colors.card,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: Colors[colorScheme].card,
+    borderRadius: Theme.Radii.medium,
+    padding: Theme.Spacing.medium,
+    marginBottom: Theme.Spacing.medium,
   },
   journalTitle: {
-    fontSize: 16,
+    fontSize: Theme.Fonts.sizes.medium,
     fontWeight: 'bold',
-    color: colors.text,
+    color: Colors[colorScheme].text,
   },
   journalDate: {
-    fontSize: 12,
-    color: colors.text,
-    marginVertical: 4,
+    color: Colors[colorScheme].darkGray,
+    fontSize: Theme.Fonts.sizes.small,
+    marginBottom: Theme.Spacing.small,
   },
   journalDescription: {
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
+    color: Colors[colorScheme].text,
   },
-  taskItem: {
-    backgroundColor: colors.card,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
+  taskEntry: {
+    backgroundColor: Colors[colorScheme].card,
+    borderRadius: Theme.Radii.medium,
+    padding: Theme.Spacing.medium,
+    marginBottom: Theme.Spacing.medium,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  taskText: {
-    fontSize: 16,
-    color: colors.text,
+  taskTitle: {
+    fontSize: Theme.Fonts.sizes.medium,
+    color: Colors[colorScheme].text,
   },
   taskDueDate: {
-    fontSize: 14,
-    color: colors.destructive,
+    color: Colors[colorScheme].darkGray,
   },
   photoGrid: {
     flexDirection: 'row',
@@ -356,8 +357,10 @@ const styles = (colors) => StyleSheet.create({
   },
   photo: {
     width: '48%',
-    aspectRatio: 1,
-    borderRadius: 8,
-    marginBottom: '4%',
+    height: 150,
+    borderRadius: Theme.Radii.medium,
+    marginBottom: Theme.Spacing.small,
   },
 });
+
+export default PlantDetailScreen;

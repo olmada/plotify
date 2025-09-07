@@ -21,8 +21,29 @@ const Spacing = {
   large: 24, // 6 * var(--spacing) = 6 * 4px = 24px
 };
 
+const Radii = {
+  small: 4,
+  medium: 8,
+  large: 12,
+};
+
+const Shadows = {
+  medium: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+};
+
 export const Theme = {
   Colors,
   Fonts,
   Spacing,
+  Radii,
+  Shadows,
 };

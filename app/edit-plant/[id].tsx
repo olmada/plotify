@@ -13,7 +13,8 @@ import { DatePicker } from '../../components/ui/DatePicker';
 
 const EditPlantScreen = () => {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const id = params.id ? (Array.isArray(params.id) ? params.id[0] : params.id) : undefined;
   const colorScheme = useColorScheme();
   
   const [plant, setPlant] = useState<Partial<Plant>>({
@@ -233,7 +234,10 @@ const EditPlantScreen = () => {
           placeholder="e.g., 75"
           keyboardType="numeric"
           value={plant.daysToHarvest?.toString() || ''}
-          onChangeText={(text) => handleInputChange('daysToHarvest', text ? parseInt(text, 10) : undefined)}
+          onChangeText={(text) => {
+            const num = parseInt(text, 10);
+            handleInputChange('daysToHarvest', isNaN(num) ? undefined : num);
+          }}
         />
         <Text style={styles(colorScheme).label}>Expected Harvest Date</Text>
         <Input
