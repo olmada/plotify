@@ -152,37 +152,10 @@ const EditPlantScreen = () => {
     }
   }, [plant.seedPlantedDate, plant.transplantedDate, plant.daysToHarvest, plant.plantingMethod, plant]);
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: Theme.Spacing.medium,
-      backgroundColor: Colors[colorScheme].background,
-    },
-    section: {
-      marginBottom: Theme.Spacing.large,
-    },
-    subtitle: {
-      fontSize: Theme.Fonts.sizes.large,
-      fontWeight: Theme.Fonts.weights.bold,
-      marginBottom: Theme.Spacing.medium,
-      color: Colors[colorScheme].text,
-    },
-    label: {
-      fontSize: Theme.Fonts.sizes.medium,
-      fontWeight: Theme.Fonts.weights.medium,
-      marginBottom: Theme.Spacing.small,
-      color: Colors[colorScheme].text,
-    },
-    disabledInput: {
-      backgroundColor: Colors[colorScheme].lightGray,
-      color: Colors[colorScheme].darkGray,
-    },
-  });
-
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.subtitle}>Plant Identity</Text>
+    <ScrollView style={styles(colorScheme).container}>
+      <View style={styles(colorScheme).section}>
+        <Text style={styles(colorScheme).subtitle}>Plant Identity</Text>
         <Input
           placeholder="Plant Name (e.g., Tomato)"
           value={plant.name}
@@ -195,8 +168,8 @@ const EditPlantScreen = () => {
         />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.subtitle}>Planting Method</Text>
+      <View style={styles(colorScheme).section}>
+        <Text style={styles(colorScheme).subtitle}>Planting Method</Text>
         <SegmentedControl
           values={['Direct Sow', 'Transplant', 'Purchased Start']}
           selectedIndex={['directSow', 'transplant', 'purchasedStart'].indexOf(plant.plantingMethod!)}
@@ -210,11 +183,11 @@ const EditPlantScreen = () => {
         />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.subtitle}>Details</Text>
+      <View style={styles(colorScheme).section}>
+        <Text style={styles(colorScheme).subtitle}>Details</Text>
         {(plant.plantingMethod === 'directSow' || plant.plantingMethod === 'transplant') && (
           <>
-            <Text style={styles.label}>Seed Purchased From</Text>
+            <Text style={styles(colorScheme).label}>Seed Purchased From</Text>
             <Select
               selectedValue={plant.seedPurchasedFrom}
               onValueChange={(value) => handleInputChange('seedPurchasedFrom', value)}
@@ -223,7 +196,7 @@ const EditPlantScreen = () => {
                 ...seedCompanies
               ]}
             />
-            <Text style={styles.label}>Seed Planted Date</Text>
+            <Text style={styles(colorScheme).label}>Seed Planted Date</Text>
             <DatePicker
               value={plant.seedPlantedDate}
               onValueChange={(date) => handleInputChange('seedPlantedDate', date)}
@@ -233,7 +206,7 @@ const EditPlantScreen = () => {
         )}
         {plant.plantingMethod === 'purchasedStart' && (
           <>
-            <Text style={styles.label}>Purchased From</Text>
+            <Text style={styles(colorScheme).label}>Purchased From</Text>
             <Input
                 placeholder="e.g., Home Depot"
                 value={plant.purchasedFrom}
@@ -243,7 +216,7 @@ const EditPlantScreen = () => {
         )}
         {(plant.plantingMethod === 'transplant' || plant.plantingMethod === 'purchasedStart') && (
             <>
-                <Text style={styles.label}>Transplant Date</Text>
+                <Text style={styles(colorScheme).label}>Transplant Date</Text>
                 <DatePicker
                   value={plant.transplantedDate}
                   onValueChange={(date) => handleInputChange('transplantedDate', date)}
@@ -253,25 +226,25 @@ const EditPlantScreen = () => {
         )}
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.subtitle}>Harvest Details</Text>
-        <Text style={styles.label}>Days to Harvest</Text>
+      <View style={styles(colorScheme).section}>
+        <Text style={styles(colorScheme).subtitle}>Harvest Details</Text>
+        <Text style={styles(colorScheme).label}>Days to Harvest</Text>
         <Input
           placeholder="e.g., 75"
           keyboardType="numeric"
           value={plant.daysToHarvest?.toString() || ''}
           onChangeText={(text) => handleInputChange('daysToHarvest', text ? parseInt(text, 10) : undefined)}
         />
-        <Text style={styles.label}>Expected Harvest Date</Text>
+        <Text style={styles(colorScheme).label}>Expected Harvest Date</Text>
         <Input
-          style={styles.disabledInput}
+          style={styles(colorScheme).disabledInput}
           editable={false}
           value={plant.expectedHarvestDate ? plant.expectedHarvestDate.toLocaleDateString() : 'Calculated automatically'}
         />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.subtitle}>Location</Text>
+      <View style={styles(colorScheme).section}>
+        <Text style={styles(colorScheme).subtitle}>Location</Text>
         <Select
           selectedValue={plant.gardenBed}
           onValueChange={(value) => handleInputChange('gardenBed', value)}
@@ -282,14 +255,14 @@ const EditPlantScreen = () => {
         />
       </View>
 
-      <View style={styles.section}>
+      <View style={styles(colorScheme).section}>
         <Button onPress={handleSave}>Save Plant</Button>
       </View>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = (colorScheme) => StyleSheet.create({
   container: {
     flex: 1,
     padding: Theme.Spacing.medium,

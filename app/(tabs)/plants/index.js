@@ -6,7 +6,7 @@ import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { useColorScheme } from '../../../hooks/useColorScheme';
 import { Colors } from '../../../constants/Colors';
-import { Settings, Search, MapPin, Calendar, Camera, CheckSquare, Sprout } from 'lucide-react-native';
+import { Settings, MapPin, Calendar, Camera, CheckSquare } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const FILTERS = ["All Plants", "From Seed", "Transplanted"];
@@ -57,7 +57,7 @@ export default function PlantsScreen() {
               <Text style={styles.badgeText}>{plant.status}</Text>
             </Badge>
           </View>
-          <Text style={styles.latinName}>{plant.latin_name} '{plant.variety}'</Text>
+          <Text style={styles.latinName}>{plant.latin_name} &apos;{plant.variety}&apos;</Text>
           
           <View style={styles.plantDetailRow}>
             <MapPin size={14} color={colors.mutedForeground} />

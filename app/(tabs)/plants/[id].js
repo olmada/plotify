@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, useColorScheme } from 'react-native';
 import { useLocalSearchParams, useNavigation, Link } from 'expo-router';
 import React, { useLayoutEffect, useState } from 'react';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Colors } from '../../../constants/Colors';
 
 // New dummy data matching the requested structure
 const plant = {
@@ -31,11 +32,11 @@ const plant = {
   ]
 };
 
-const CareInfoItem = ({ icon, label, value }) => (
-  <View style={styles.careItem}>
-    <MaterialCommunityIcons name={icon} size={24} color="#34495e" style={styles.careIcon} />
-    <Text style={styles.careLabel}>{label}</Text>
-    <Text style={styles.careValue}>{value}</Text>
+const CareInfoItem = ({ icon, label, value, colors }) => (
+  <View style={styles(colors).careItem}>
+    <MaterialCommunityIcons name={icon} size={24} color={colors.text} style={styles(colors).careIcon} />
+    <Text style={styles(colors).careLabel}>{label}</Text>
+    <Text style={styles(colors).careValue}>{value}</Text>
   </View>
 );
 
@@ -43,6 +44,8 @@ export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams();
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('Journal');
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -50,27 +53,27 @@ export default function PlantDetailScreen() {
       headerRight: () => (
         <Link href={`/edit-plant/${id}`} asChild>
           <TouchableOpacity style={{ marginRight: 16 }}>
-            <Ionicons name="pencil" size={24} color="#007AFF" />
+            <Ionicons name="pencil" size={24} color={colors.primary} />
           </TouchableOpacity>
         </Link>
       ),
     });
-  }, [navigation, id]);
+  }, [navigation, id, colors]);
 
   const renderContent = () => {
     switch (activeTab) {
       case 'Journal':
         return (
           <View>
-            <TouchableOpacity style={styles.addEntryButton}>
+            <TouchableOpacity style={styles(colors).addEntryButton}>
               <Ionicons name="add" size={20} color="white" />
-              <Text style={styles.addEntryButtonText}>Add Entry</Text>
+              <Text style={styles(colors).addEntryButtonText}>Add Entry</Text>
             </TouchableOpacity>
             {plant.journalEntries.map(entry => (
-              <View key={entry.id} style={styles.journalEntry}>
-                <Text style={styles.journalTitle}>{entry.title}</Text>
-                <Text style={styles.journalDate}>{entry.date}</Text>
-                <Text style={styles.journalDescription}>{entry.description}</Text>
+              <View key={entry.id} style={styles(colors).journalEntry}>
+                <Text style={styles(colors).journalTitle}>{entry.title}</Text>
+                <Text style={styles(colors).journalDate}>{entry.date}</Text>
+                <Text style={styles(colors).journalDescription}>{entry.description}</Text>
               </View>
             ))}
           </View>
@@ -79,18 +82,18 @@ export default function PlantDetailScreen() {
         return (
           <View>
             {plant.tasks.map(task => (
-              <View key={task.id} style={styles.taskItem}>
-                <Text style={styles.taskText}>{task.text}</Text>
-                <Text style={styles.taskDueDate}>Due: {task.due}</Text>
+              <View key={task.id} style={styles(colors).taskItem}>
+                <Text style={styles(colors).taskText}>{task.text}</Text>
+                <Text style={styles(colors).taskDueDate}>Due: {task.due}</Text>
               </View>
             ))}
           </View>
         );
       case 'Photos':
         return (
-          <View style={styles.photoGrid}>
+          <View style={styles(colors).photoGrid}>
             {plant.photos.map((uri, index) => (
-              <Image key={index} source={{ uri }} style={styles.photo} />
+              <Image key={index} source={{ uri }} style={styles(colors).photo} />
             ))}
           </View>
         );
@@ -100,63 +103,63 @@ export default function PlantDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: plant.image }} style={styles.plantImage} />
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+    <SafeAreaView style={styles(colors).safeArea}>
+      <ScrollView style={styles(colors).container}>
+        <View style={styles(colors).imageContainer}>
+          <Image source={{ uri: plant.image }} style={styles(colors).plantImage} />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles(colors).backButton}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
-          <View style={styles.imageBadge}>
-            <Text style={styles.imageBadgeText}>{plant.plantedFrom}</Text>
+          <View style={styles(colors).imageBadge}>
+            <Text style={styles(colors).imageBadgeText}>{plant.plantedFrom}</Text>
           </View>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.primaryInfo}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Stage</Text>
-              <Text style={styles.infoValue}>{plant.stage}</Text>
+        <View style={styles(colors).card}>
+          <View style={styles(colors).primaryInfo}>
+            <View style={styles(colors).infoItem}>
+              <Text style={styles(colors).infoLabel}>Stage</Text>
+              <Text style={styles(colors).infoValue}>{plant.stage}</Text>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Location</Text>
-              <Text style={styles.infoValue}>{plant.location}</Text>
+            <View style={styles(colors).infoItem}>
+              <Text style={styles(colors).infoLabel}>Location</Text>
+              <Text style={styles(colors).infoValue}>{plant.location}</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Care Information</Text>
-          <View style={styles.careGrid}>
-            <CareInfoItem icon="water-outline" label="Last Watered" value={plant.lastWatered} />
-            <CareInfoItem icon="white-balance-sunny" label="Sunlight" value={plant.sunlight} />
-            <CareInfoItem icon="thermometer" label="Temperature" value={plant.temperature} />
-            <CareInfoItem icon="calendar-start" label="Planted Date" value={plant.plantedDate} />
+        <View style={styles(colors).card}>
+          <Text style={styles(colors).cardTitle}>Care Information</Text>
+          <View style={styles(colors).careGrid}>
+            <CareInfoItem icon="water-outline" label="Last Watered" value={plant.lastWatered} colors={colors} />
+            <CareInfoItem icon="white-balance-sunny" label="Sunlight" value={plant.sunlight} colors={colors} />
+            <CareInfoItem icon="thermometer" label="Temperature" value={plant.temperature} colors={colors} />
+            <CareInfoItem icon="calendar-start" label="Planted Date" value={plant.plantedDate} colors={colors} />
           </View>
         </View>
 
-        <View style={styles.tabContainer}>
+        <View style={styles(colors).tabContainer}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'Journal' && styles.activeTab]}
+            style={[styles(colors).tab, activeTab === 'Journal' && styles(colors).activeTab]}
             onPress={() => setActiveTab('Journal')}
           >
-            <Text style={[styles.tabText, activeTab === 'Journal' && styles.activeTabText]}>Journal</Text>
+            <Text style={[styles(colors).tabText, activeTab === 'Journal' && styles(colors).activeTabText]}>Journal</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'Tasks' && styles.activeTab]}
+            style={[styles(colors).tab, activeTab === 'Tasks' && styles(colors).activeTab]}
             onPress={() => setActiveTab('Tasks')}
           >
-            <Text style={[styles.tabText, activeTab === 'Tasks' && styles.activeTabText]}>Tasks</Text>
+            <Text style={[styles(colors).tabText, activeTab === 'Tasks' && styles(colors).activeTabText]}>Tasks</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'Photos' && styles.activeTab]}
+            style={[styles(colors).tab, activeTab === 'Photos' && styles(colors).activeTab]}
             onPress={() => setActiveTab('Photos')}
           >
-            <Text style={[styles.tabText, activeTab === 'Photos' && styles.activeTabText]}>Photos</Text>
+            <Text style={[styles(colors).tabText, activeTab === 'Photos' && styles(colors).activeTabText]}>Photos</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.tabContent}>
+        <View style={styles(colors).tabContent}>
           {renderContent()}
         </View>
       </ScrollView>
@@ -164,10 +167,10 @@ export default function PlantDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = (colors) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F4F6F8',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -202,7 +205,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 16,
@@ -222,19 +225,19 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: '#555',
+    color: colors.text,
   },
   infoValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: colors.text,
     marginTop: 4,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#2c3e50',
+    color: colors.text,
   },
   careGrid: {
     flexDirection: 'row',
@@ -251,12 +254,12 @@ const styles = StyleSheet.create({
   },
   careLabel: {
     fontSize: 12,
-    color: '#7f8c8d',
+    color: colors.text,
   },
   careValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#34495e',
+    color: colors.text,
     marginTop: 2,
   },
   tabContainer: {
@@ -264,7 +267,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginHorizontal: 16,
     marginTop: 24,
-    backgroundColor: '#E9ECEF',
+    backgroundColor: colors.muted,
     borderRadius: 20,
     padding: 4,
   },
@@ -274,7 +277,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   activeTab: {
-    backgroundColor: 'white',
+    backgroundColor: colors.background,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
@@ -285,10 +288,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '600',
-    color: '#495057',
+    color: colors.text,
   },
   activeTabText: {
-    color: '#2c3e50',
+    color: colors.primary,
   },
   tabContent: {
     padding: 16,
@@ -297,7 +300,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#27ae60',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 8,
     marginBottom: 16,
@@ -309,7 +312,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   journalEntry: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
@@ -317,20 +320,20 @@ const styles = StyleSheet.create({
   journalTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#34495e',
+    color: colors.text,
   },
   journalDate: {
     fontSize: 12,
-    color: '#7f8c8d',
+    color: colors.text,
     marginVertical: 4,
   },
   journalDescription: {
     fontSize: 14,
-    color: '#2c3e50',
+    color: colors.text,
     lineHeight: 20,
   },
   taskItem: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
@@ -340,11 +343,11 @@ const styles = StyleSheet.create({
   },
   taskText: {
     fontSize: 16,
-    color: '#34495e',
+    color: colors.text,
   },
   taskDueDate: {
     fontSize: 14,
-    color: '#c0392b',
+    color: colors.destructive,
   },
   photoGrid: {
     flexDirection: 'row',
