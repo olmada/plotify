@@ -1,3 +1,9 @@
+// =================================================================================
+// TODO: LEGACY CODE - REVIEW FOR REMOVAL
+// This file was identified as potentially unreferenced during an automated code audit.
+// It may be legacy code that is no longer in use.
+// Please review its purpose and dependencies before deleting.
+// =================================================================================
 // File: mobile/src/screens/AuthScreen.js
 import React, { useState } from 'react';
 import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
