@@ -5,7 +5,7 @@ import { Plant, PlantingMethod } from '../../types/plant';
 import { supabase } from '../../src/services/supabase';
 import { Colors } from '../../constants/Colors';
 import { Theme } from '../../constants/Theme';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
@@ -24,20 +24,28 @@ const EditPlantScreen = () => {
     seedPurchasedFrom: undefined,
     daysToHarvest: undefined,
     gardenBed: undefined,
+    variety_id: undefined,
   });
 
   const [gardenBeds, setGardenBeds] = useState<{ label: string, value: any }[]>([]);
-  const [seedCompanies, setSeedCompanies] = useState<{ label: string, value: any }[]>([]);
+  const [plantVarieties, setPlantVarieties] = useState<{ label: string, value: any }[]>([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
+      console.log('Fetching initial data...');
       const { data: bedsData, error: bedsError } = await supabase.from('garden_beds').select('id, name');
       if (bedsError) console.error('Error fetching garden beds:', bedsError);
-      else setGardenBeds(bedsData.map(bed => ({ label: bed.name, value: bed.id })));
+      else {
+        console.log('Garden beds fetched:', bedsData);
+        setGardenBeds(bedsData.map(bed => ({ label: bed.name, value: bed.id })));
+      }
 
-      const { data: companiesData, error: companiesError } = await supabase.from('seed_companies').select('id, name');
-      if (companiesError) console.error('Error fetching seed companies:', companiesError);
-      else setSeedCompanies(companiesData.map(c => ({ label: c.name, value: c.id })));
+      const { data: varietiesData, error: varietiesError } = await supabase.from('plant_varieties').select('id, common_name');
+      if (varietiesError) console.error('Error fetching plant varieties:', varietiesError);
+      else {
+        console.log('Plant varieties fetched:', varietiesData);
+        setPlantVarieties(varietiesData.map(v => ({ label: v.common_name, value: v.id })));
+      }
     };
     fetchInitialData();
   }, []);
@@ -45,6 +53,7 @@ const EditPlantScreen = () => {
   useEffect(() => {
     if (id) {
       const fetchPlantData = async () => {
+        console.log(`Fetching plant data for id: ${id}`);
         const { data, error } = await supabase
           .from('plants')
           .select(`
@@ -58,6 +67,7 @@ const EditPlantScreen = () => {
           Alert.alert("Error", "Failed to fetch plant data.");
           console.error('Error fetching plant data:', error);
         } else if (data) {
+          console.log('Plant data fetched:', data);
           let plantingMethod: PlantingMethod = 'purchasedStart';
           if (data.planted_from_seed && data.transplanted_date) {
             plantingMethod = 'transplant';
@@ -74,7 +84,8 @@ const EditPlantScreen = () => {
             seedPlantedDate: data.planted_date ? new Date(data.planted_date) : undefined,
             transplantedDate: data.transplanted_date ? new Date(data.transplanted_date) : undefined,
             daysToHarvest: data.days_to_harvest,
-            gardenBed: data.bed_id
+            gardenBed: data.bed_id,
+            variety_id: data.variety_id,
           });
         }
       };
@@ -87,6 +98,7 @@ const EditPlantScreen = () => {
   };
 
   const handleSave = async () => {
+    console.log('Saving plant...');
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -106,7 +118,7 @@ const EditPlantScreen = () => {
     const plantToSave = {
         owner_id: user.id,
         name: plant.name,
-        variety: plant.variety,
+        variety_id: plant.variety_id,
         planted_from_seed: plant.plantingMethod === 'directSow' || plant.plantingMethod === 'transplant',
         seed_purchased_from: plant.plantingMethod !== 'purchasedStart' ? plant.seedPurchasedFrom : null,
         purchased_from: plant.plantingMethod === 'purchasedStart' ? plant.purchasedFrom : null,
@@ -116,6 +128,8 @@ const EditPlantScreen = () => {
         expected_harvest_date: plant.expectedHarvestDate,
         bed_id: plant.gardenBed,
     };
+
+    console.log('Plant data to save:', plantToSave);
 
     const { error } = id 
       ? await supabase.from('plants').update(plantToSave).eq('id', id).select()
@@ -154,115 +168,118 @@ const EditPlantScreen = () => {
   }, [plant.seedPlantedDate, plant.transplantedDate, plant.daysToHarvest, plant.plantingMethod, plant]);
 
   return (
-    <ScrollView style={styles(colorScheme).container}>
-      <View style={styles(colorScheme).section}>
-        <Text style={styles(colorScheme).subtitle}>Plant Identity</Text>
-        <Input
-          placeholder="Plant Name (e.g., Tomato)"
-          value={plant.name}
-          onChangeText={(text) => handleInputChange('name', text)}
-        />
-        <Input
-          placeholder="Variety (e.g., Cherokee Purple)"
-          value={plant.variety}
-          onChangeText={(text) => handleInputChange('variety', text)}
-        />
-      </View>
+    <View style={{flex: 1}}>
+      <Stack.Screen options={{ presentation: 'modal' }} />
+      <ScrollView style={styles(colorScheme).container}>
+        <View style={styles(colorScheme).section}>
+          <Text style={styles(colorScheme).subtitle}>Plant Identity</Text>
+          <Input
+            placeholder="Plant Name (e.g., Tomato)"
+            value={plant.name}
+            onChangeText={(text) => handleInputChange('name', text)}
+          />
+          <Select
+            selectedValue={plant.variety_id}
+            onValueChange={(value) => handleInputChange('variety_id', value)}
+            options={[
+              { label: 'Select a Variety', value: null },
+              ...plantVarieties
+            ]}
+          />
+        </View>
 
-      <View style={styles(colorScheme).section}>
-        <Text style={styles(colorScheme).subtitle}>Planting Method</Text>
-        <SegmentedControl
-          values={['Direct Sow', 'Transplant', 'Purchased Start']}
-          selectedIndex={['directSow', 'transplant', 'purchasedStart'].indexOf(plant.plantingMethod!)}
-          onChange={(event) => {
-            const method = ['directSow', 'transplant', 'purchasedStart'][event.nativeEvent.selectedSegmentIndex] as PlantingMethod;
-            handleInputChange('plantingMethod', method);
-          }}
-          tintColor={Colors[colorScheme].primary}
-          fontStyle={{ color: Colors[colorScheme].text }}
-          activeFontStyle={{ color: Colors[colorScheme].background }}
-        />
-      </View>
+        <View style={styles(colorScheme).section}>
+          <Text style={styles(colorScheme).subtitle}>Planting Method</Text>
+          <SegmentedControl
+            values={['Direct Sow', 'Transplant', 'Purchased Start']}
+            selectedIndex={['directSow', 'transplant', 'purchasedStart'].indexOf(plant.plantingMethod!)}
+            onChange={(event) => {
+              const method = ['directSow', 'transplant', 'purchasedStart'][event.nativeEvent.selectedSegmentIndex] as PlantingMethod;
+              handleInputChange('plantingMethod', method);
+            }}
+            tintColor={Colors[colorScheme].primary}
+            fontStyle={{ color: Colors[colorScheme].text }}
+            activeFontStyle={{ color: Colors[colorScheme].background }}
+          />
+        </View>
 
-      <View style={styles(colorScheme).section}>
-        <Text style={styles(colorScheme).subtitle}>Details</Text>
-        {(plant.plantingMethod === 'directSow' || plant.plantingMethod === 'transplant') && (
-          <>
-            <Text style={styles(colorScheme).label}>Seed Purchased From</Text>
-            <Select
-              selectedValue={plant.seedPurchasedFrom}
-              onValueChange={(value) => handleInputChange('seedPurchasedFrom', value)}
-              options={[
-                { label: 'Select a company', value: null },
-                ...seedCompanies
-              ]}
-            />
-            <Text style={styles(colorScheme).label}>Seed Planted Date</Text>
-            <DatePicker
-              value={plant.seedPlantedDate}
-              onValueChange={(date) => handleInputChange('seedPlantedDate', date)}
-              placeholder="Select Date"
-            />
-          </>
-        )}
-        {plant.plantingMethod === 'purchasedStart' && (
-          <>
-            <Text style={styles(colorScheme).label}>Purchased From</Text>
-            <Input
-                placeholder="e.g., Home Depot"
-                value={plant.purchasedFrom}
-                onChangeText={(text) => handleInputChange('purchasedFrom', text)}
-            />
-          </>
-        )}
-        {(plant.plantingMethod === 'transplant' || plant.plantingMethod === 'purchasedStart') && (
+        <View style={styles(colorScheme).section}>
+          <Text style={styles(colorScheme).subtitle}>Details</Text>
+          {(plant.plantingMethod === 'directSow' || plant.plantingMethod === 'transplant') && (
             <>
-                <Text style={styles(colorScheme).label}>Transplant Date</Text>
-                <DatePicker
-                  value={plant.transplantedDate}
-                  onValueChange={(date) => handleInputChange('transplantedDate', date)}
-                  placeholder="Select Date"
-                />
+              <Text style={styles(colorScheme).label}>Seed Purchased From</Text>
+              <Input
+                placeholder="e.g., Johnny's Selected Seeds"
+                value={plant.seedPurchasedFrom}
+                onChangeText={(text) => handleInputChange('seedPurchasedFrom', text)}
+              />
+              <Text style={styles(colorScheme).label}>Seed Planted Date</Text>
+              <DatePicker
+                value={plant.seedPlantedDate}
+                onValueChange={(date) => handleInputChange('seedPlantedDate', date)}
+                placeholder="Select Date"
+              />
             </>
-        )}
-      </View>
+          )}
+          {plant.plantingMethod === 'purchasedStart' && (
+            <>
+              <Text style={styles(colorScheme).label}>Purchased From</Text>
+              <Input
+                  placeholder="e.g., Home Depot"
+                  value={plant.purchasedFrom}
+                  onChangeText={(text) => handleInputChange('purchasedFrom', text)}
+              />
+            </>
+          )}
+          {(plant.plantingMethod === 'transplant' || plant.plantingMethod === 'purchasedStart') && (
+              <>
+                  <Text style={styles(colorScheme).label}>Transplant Date</Text>
+                  <DatePicker
+                    value={plant.transplantedDate}
+                    onValueChange={(date) => handleInputChange('transplantedDate', date)}
+                    placeholder="Select Date"
+                  />
+              </>
+          )}
+        </View>
 
-      <View style={styles(colorScheme).section}>
-        <Text style={styles(colorScheme).subtitle}>Harvest Details</Text>
-        <Text style={styles(colorScheme).label}>Days to Harvest</Text>
-        <Input
-          placeholder="e.g., 75"
-          keyboardType="numeric"
-          value={plant.daysToHarvest?.toString() || ''}
-          onChangeText={(text) => {
-            const num = parseInt(text, 10);
-            handleInputChange('daysToHarvest', isNaN(num) ? undefined : num);
-          }}
-        />
-        <Text style={styles(colorScheme).label}>Expected Harvest Date</Text>
-        <Input
-          style={styles(colorScheme).disabledInput}
-          editable={false}
-          value={plant.expectedHarvestDate ? plant.expectedHarvestDate.toLocaleDateString() : 'Calculated automatically'}
-        />
-      </View>
+        <View style={styles(colorScheme).section}>
+          <Text style={styles(colorScheme).subtitle}>Harvest Details</Text>
+          <Text style={styles(colorScheme).label}>Days to Harvest</Text>
+          <Input
+            placeholder="e.g., 75"
+            keyboardType="numeric"
+            value={plant.daysToHarvest?.toString() || ''}
+            onChangeText={(text) => {
+              const num = parseInt(text, 10);
+              handleInputChange('daysToHarvest', isNaN(num) ? undefined : num);
+            }}
+          />
+          <Text style={styles(colorScheme).label}>Expected Harvest Date</Text>
+          <Input
+            style={styles(colorScheme).disabledInput}
+            editable={false}
+            value={plant.expectedHarvestDate ? plant.expectedHarvestDate.toLocaleDateString() : 'Calculated automatically'}
+          />
+        </View>
 
-      <View style={styles(colorScheme).section}>
-        <Text style={styles(colorScheme).subtitle}>Location</Text>
-        <Select
-          selectedValue={plant.gardenBed}
-          onValueChange={(value) => handleInputChange('gardenBed', value)}
-          options={[
-            { label: 'Select a Location', value: null },
-            ...gardenBeds
-          ]}
-        />
-      </View>
+        <View style={styles(colorScheme).section}>
+          <Text style={styles(colorScheme).subtitle}>Location</Text>
+          <Select
+            selectedValue={plant.gardenBed}
+            onValueChange={(value) => handleInputChange('gardenBed', value)}
+            options={[
+              { label: 'Select a Location', value: null },
+              ...gardenBeds
+            ]}
+          />
+        </View>
 
-      <View style={styles(colorScheme).section}>
-        <Button onPress={handleSave}>Save Plant</Button>
-      </View>
-    </ScrollView>
+        <View style={styles(colorScheme).section}>
+          <Button onPress={handleSave}>Save Plant</Button>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 

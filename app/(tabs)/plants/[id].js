@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, useColorScheme, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../../../src/services/supabase';
 import { Colors } from '../../../constants/Colors';
@@ -23,6 +24,7 @@ const PlantDetailScreen = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => getStyles(colorScheme), [colorScheme]);
 
   const [plant, setPlant] = useState(null);
@@ -126,79 +128,61 @@ const PlantDetailScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: plant.name,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
-              <Ionicons name="arrow-back" size={24} color={Colors[colorScheme].primary} />
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity onPress={() => router.push(`/edit-plant/${id}`)} style={{ marginRight: 16 }}>
-              <Ionicons name="pencil" size={24} color={Colors[colorScheme].primary} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: mainPhoto }} style={styles.plantImage} />
-        {plant.planted_from_seed !== null && (
-          <View style={styles.imageBadge}>
-            <Text style={styles.imageBadgeText}>
-              {plant.planted_from_seed ? 'From Seed' : 'Transplanted'}
-            </Text>
-          </View>
-        )}
+    <View style={{flex: 1}}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/plants')} style={styles.headerButton}>
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push({ pathname: `/edit-plant/${id}` })} style={styles.headerButton}>
+          <Ionicons name="pencil" size={24} color="white" />
+        </TouchableOpacity>
       </View>
+      <ScrollView style={styles.container}>
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: mainPhoto }} style={styles.plantImage} />
+          {plant.planted_from_seed !== null && (
+            <View style={styles.imageBadge}>
+              <Text style={styles.imageBadgeText}>
+                {plant.planted_from_seed ? 'From Seed' : 'Transplanted'}
+              </Text>
+            </View>
+          )}
+        </View>
 
-      <View style={styles.card}>
-        <Text style={styles.varietyName}>{plant.plant_varieties?.common_name}</Text>
-        <Text style={styles.scientificName}>{plant.plant_varieties?.scientific_name}</Text>
-      </View>
+        <View style={[styles.card, {flexDirection: 'row', justifyContent: 'space-around'}]}>
+          <InfoItem icon="leaf-outline" label="Stage" value={plant.stage || 'N/A'} />
+          <InfoItem icon="map-marker-outline" label="Location" value={plant.garden_beds?.name || 'N/A'} />
+        </View>
 
-      {plant.notes && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Notes</Text>
-          <Text style={styles.text}>{plant.notes}</Text>
+          <Text style={styles.cardTitle}>Care Information</Text>
+          <View style={styles.grid}>
+            <InfoItem icon="water-outline" label="Last Watered" value={plant.last_watered ? formatDistanceToNow(new Date(plant.last_watered), { addSuffix: true }) : 'N/A'} />
+            <InfoItem icon="white-balance-sunny" label="Sunlight" value={plant.plant_varieties?.sunlight_requirements || 'N/A'} />
+            <InfoItem icon="thermometer" label="Temp. Range" value={plant.plant_varieties ? `${plant.plant_varieties.temperature_min}-${plant.plant_varieties.temperature_max}°F` : 'N/A'} />
+            <InfoItem icon="calendar-outline" label="Planted Date" value={formatDate(plant.planted_date)} />
+            {plant.transplanted_date && <InfoItem icon="calendar-sync-outline" label="Transplanted" value={formatDate(plant.transplanted_date)} />}
+          </View>
         </View>
-      )}
 
-      <View style={styles.card}>
-        <InfoItem icon="leaf-outline" label="Stage" value={plant.stage || 'N/A'} />
-        <InfoItem icon="map-marker-outline" label="Location" value={plant.garden_beds?.name || 'N/A'} />
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Care Information</Text>
-        <View style={styles.grid}>
-          <InfoItem icon="water-outline" label="Last Watered" value={plant.last_watered ? formatDistanceToNow(new Date(plant.last_watered), { addSuffix: true }) : 'N/A'} />
-          <InfoItem icon="white-balance-sunny" label="Sunlight" value={plant.plant_varieties?.sunlight_requirements || 'N/A'} />
-          <InfoItem icon="thermometer" label="Temp. Range" value={plant.plant_varieties ? `${plant.plant_varieties.temperature_min}-${plant.plant_varieties.temperature_max}°F` : 'N/A'} />
-          <InfoItem icon="calendar-outline" label="Planted Date" value={formatDate(plant.planted_date)} />
-          {plant.transplanted_date && <InfoItem icon="calendar-sync-outline" label="Transplanted" value={formatDate(plant.transplanted_date)} />}
+        <View style={styles.tabContainer}>
+          {['Journal', 'Tasks', 'Photos'].map(tab => (
+            <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && styles.activeTab]}>
+              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </View>
 
-      <View style={styles.tabContainer}>
-        {['Journal', 'Tasks', 'Photos'].map(tab => (
-          <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && styles.activeTab]}>
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.tabContent}>
-        {activeTab === 'Journal' && (
-          <Button onPress={() => router.push(`/add-entry/${id}`)} style={{ marginBottom: Theme.Spacing.medium }}>
-            + Add Entry
-          </Button>
-        )}
-        {renderContent()}
-      </View>
-    </ScrollView>
+        <View style={styles.tabContent}>
+          {activeTab === 'Journal' && (
+            <Button onPress={() => router.push({ pathname: '/(tabs)/journal/add', params: { plantId: id } })} style={{ marginBottom: Theme.Spacing.medium }}>
+              + Add Entry
+            </Button>
+          )}
+          {renderContent()}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -215,6 +199,19 @@ const InfoItem = ({ icon, label, value }) => {
 };
 
 const getStyles = (colorScheme) => StyleSheet.create({
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    zIndex: 1,
+  },
+  headerButton: {
+    padding: 8,
+  },
   varietyName: {
     fontSize: Theme.Fonts.sizes.xlarge,
     fontWeight: 'bold',
@@ -273,7 +270,7 @@ const getStyles = (colorScheme) => StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
   },
   infoItem: {
     alignItems: 'center',
